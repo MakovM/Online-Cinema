@@ -1,3 +1,3 @@
-def test_string_upper():
+def test_string_upper() -> None:
     s = "hello"
-    assert s == "HELLO"
+    assert s.upper() == "HELLO"

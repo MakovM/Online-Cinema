@@ -1,4 +1,4 @@
 import pytest
 
-def test_addition():
-    assert 1 + 1 == 1
+def test_addition() -> None:
+    assert 1 + 1 == 2

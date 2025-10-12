@@ -1,2 +1,2 @@
-def test_subtraction():
-    assert 5 - 3 == 1
+def test_subtraction() -> None:
+    assert 5 - 3 == 2
