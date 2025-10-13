@@ -1,0 +1,16 @@
+from schemas.movies import (
+    GenreSchema,
+    GenreCreateSchema,
+    GenreUpdateSchema,
+    StarSchema,
+    StarCreateSchema,
+    StarUpdateSchema,
+    DirectorSchema,
+    CertificationSchema,
+    MovieBaseSchema,
+    MovieDetailSchema,
+    MovieListItemSchema,
+    MovieListResponseSchema,
+    MovieCreateSchema,
+    MovieUpdateSchema,
+)
