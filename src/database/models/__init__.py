@@ -9,3 +9,5 @@ from database.models.movies import (
     movie_stars,
     movie_directors,
 )
+from database.models.accounts import UserModel
+

@@ -1,0 +1,2 @@
+def router() -> None:
+    pass
