@@ -1,7 +1,17 @@
 import uuid as uuid_pkg
 from typing import Optional
 
-from sqlalchemy import String, Float, Text, DECIMAL, UniqueConstraint, ForeignKey, Table, Column, Integer
+from sqlalchemy import (
+    String,
+    Float,
+    Text,
+    DECIMAL,
+    UniqueConstraint,
+    ForeignKey,
+    Table,
+    Column,
+    Integer,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
@@ -112,14 +122,10 @@ class Movie(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
 
-    certification_id: Mapped[int] = mapped_column(
-        ForeignKey("certifications.id"), nullable=False
-    )
+    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
 
     # Relationships
-    certification: Mapped["Certification"] = relationship(
-        "Certification", back_populates="movies"
-    )
+    certification: Mapped["Certification"] = relationship("Certification", back_populates="movies")
 
     genres: Mapped[list["Genre"]] = relationship(
         "Genre", secondary=movie_genres, back_populates="movies"
@@ -133,9 +139,7 @@ class Movie(Base):
         "Star", secondary=movie_stars, back_populates="movies"
     )
 
-    __table_args__ = (
-        UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),
-    )
+    __table_args__ = (UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),)
 
     @classmethod
     def default_order_by(cls):
