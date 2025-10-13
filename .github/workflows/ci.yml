@@ -26,6 +26,10 @@ jobs:
           pip install poetry
           poetry install
 
+      - name: Run isort
+        run: |
+          poetry run isort src
+
       - name: Run black
         run: |
           poetry run black src
