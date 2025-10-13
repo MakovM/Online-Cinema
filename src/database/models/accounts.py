@@ -80,6 +80,8 @@ class UserModel(Base):
         "UserProfileModel", back_populates="user", cascade="all, delete-orphan"
     )
 
+    cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
 
