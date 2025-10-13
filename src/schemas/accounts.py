@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from database.models import UserModel
-from database.validators.account import validate_password_strength, validate_email
+from database.validators.account import validate_password_strength, validate_email as validate_email_external
 
 
 class BaseEmailPasswordSchema(BaseModel):
