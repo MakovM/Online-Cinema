@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from database.models import UserModel
 from database import get_db
-from schemas import (
+from schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     UserLoginRequestSchema,
