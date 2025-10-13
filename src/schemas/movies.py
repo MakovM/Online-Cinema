@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from schemas.examples.movies import (
     certification_schema_example,
@@ -58,7 +59,7 @@ class DirectorSchema(BaseModel):
 
 class MovieBaseSchema(BaseModel):
     name: str = Field(..., max_length=255)
-    year: int = Field(..., ge=1800, le=2100)
+    year: int = Field(..., ge=1800)
     time: int = Field(..., gt=0, description="Duration in minutes")
     imdb: float = Field(..., ge=0.0, le=10.0)
     votes: int = Field(..., ge=0)
@@ -68,6 +69,14 @@ class MovieBaseSchema(BaseModel):
     price: float = Field(..., ge=0)
 
     model_config = {"from_attributes": True}
+
+    @field_validator("year")
+    @classmethod
+    def validate_year(cls, value):
+        current_year = datetime.now().year
+        if value > current_year + 1:
+            raise ValueError(f"The year cannot be greater than {current_year + 1}.")
+        return value
 
 
 class MovieDetailSchema(MovieBaseSchema):
@@ -114,7 +123,7 @@ class MovieListResponseSchema(BaseModel):
 
 class MovieCreateSchema(BaseModel):
     name: str = Field(..., max_length=255)
-    year: int = Field(..., ge=1800, le=2100)
+    year: int = Field(..., ge=1800)
     time: int = Field(..., gt=0, description="Duration in minutes")
     imdb: float = Field(..., ge=0.0, le=10.0)
     votes: int = Field(..., ge=0)
@@ -123,19 +132,37 @@ class MovieCreateSchema(BaseModel):
     description: str
     price: float = Field(..., ge=0)
     certification: str
-    genres: List[str]
-    directors: List[str]
-    stars: List[str]
+    genres: List[str] = Field(default_factory=list)
+    directors: List[str] = Field(default_factory=list)
+    stars: List[str] = Field(default_factory=list)
 
     model_config = {
         "from_attributes": True,
         "json_schema_extra": {"examples": [movie_create_schema_example]},
     }
 
+    @field_validator("year")
+    @classmethod
+    def validate_year(cls, value):
+        current_year = datetime.now().year
+        if value > current_year + 1:
+            raise ValueError(f"The year cannot be greater than {current_year + 1}.")
+        return value
+
+    @field_validator("certification", mode="before")
+    @classmethod
+    def normalize_certification(cls, value: str) -> str:
+        return value.strip().upper()
+
+    @field_validator("genres", "directors", "stars", mode="before")
+    @classmethod
+    def normalize_list_fields(cls, value: List[str]) -> List[str]:
+        return [item.strip().title() for item in value]
+
 
 class MovieUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
-    year: Optional[int] = Field(None, ge=1800, le=2100)
+    year: Optional[int] = Field(None, ge=1800)
     time: Optional[int] = Field(None, gt=0)
     imdb: Optional[float] = Field(None, ge=0.0, le=10.0)
     votes: Optional[int] = Field(None, ge=0)
@@ -149,18 +176,52 @@ class MovieUpdateSchema(BaseModel):
         "json_schema_extra": {"examples": [movie_update_schema_example]},
     }
 
+    @field_validator("year")
+    @classmethod
+    def validate_year(cls, value):
+        if value is None:
+            return value
+        current_year = datetime.now().year
+        if value > current_year + 1:
+            raise ValueError(f"The year cannot be greater than {current_year + 1}.")
+        return value
+
 
 class GenreCreateSchema(BaseModel):
     name: str = Field(..., max_length=255)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        return value.strip().title()
 
 
 class GenreUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        if value is None:
+            return value
+        return value.strip().title()
+
 
 class StarCreateSchema(BaseModel):
     name: str = Field(..., max_length=255)
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        return value.strip().title()
+
 
 class StarUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        if value is None:
+            return value
+        return value.strip().title()
