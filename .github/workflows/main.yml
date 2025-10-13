@@ -26,6 +26,10 @@ jobs:
           pip install poetry
           poetry install
 
+      - name: Run black
+        run: |
+          poetry run black src
+
       - name: Run flake8
         run: |
           poetry run flake8 src
