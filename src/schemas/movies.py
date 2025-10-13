@@ -3,6 +3,18 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from schemas.examples.movies import (
+    certification_schema_example,
+    genre_schema_example,
+    star_schema_example,
+    director_schema_example,
+    movie_item_schema_example,
+    movie_list_response_schema_example,
+    movie_create_schema_example,
+    movie_detail_schema_example,
+    movie_update_schema_example,
+)
+
 
 class CertificationSchema(BaseModel):
     id: int
@@ -10,6 +22,7 @@ class CertificationSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [certification_schema_example]},
     }
 
 
@@ -19,6 +32,7 @@ class GenreSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [genre_schema_example]},
     }
 
 
@@ -28,6 +42,7 @@ class StarSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [star_schema_example]},
     }
 
 
@@ -37,6 +52,7 @@ class DirectorSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [director_schema_example]},
     }
 
 
@@ -64,6 +80,7 @@ class MovieDetailSchema(MovieBaseSchema):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [movie_detail_schema_example]},
     }
 
 
@@ -78,6 +95,7 @@ class MovieListItemSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [movie_item_schema_example]},
     }
 
 
@@ -90,6 +108,7 @@ class MovieListResponseSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [movie_list_response_schema_example]},
     }
 
 
@@ -110,6 +129,7 @@ class MovieCreateSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [movie_create_schema_example]},
     }
 
 
@@ -126,6 +146,7 @@ class MovieUpdateSchema(BaseModel):
 
     model_config = {
         "from_attributes": True,
+        "json_schema_extra": {"examples": [movie_update_schema_example]},
     }
 
 
