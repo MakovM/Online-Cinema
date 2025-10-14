@@ -2,12 +2,13 @@ from fastapi import FastAPI
 from sqlalchemy import select
 from database.models.accounts import UserGroupModel, UserGroupEnum
 from database.session_postgresql import get_postgresql_db
-from routers import accounts
+from routers import accounts, movies
 
 app = FastAPI(title="Cinema Api", description="Description of project")
 
 api_version_prefix = "/api/v1"
 app.include_router(accounts.router, prefix=f"{api_version_prefix}/accounts", tags=["Accounts"])
+app.include_router(movies.router, prefix=f"{api_version_prefix}/movies", tags=["Movies"])
 
 
 @app.on_event("startup")
