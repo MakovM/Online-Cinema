@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
-from database.models import UserModel
+from database.models.accounts import UserModel
 from database.validators.accounts import (
     validate_password_strength,
     validate_email as validate_email_external,

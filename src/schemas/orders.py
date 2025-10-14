@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from decimal import Decimal
 from datetime import datetime
 
-from database.models import OrderStatusEnum
+from database.models.orders import OrderStatusEnum
 
 
 class BaseOrderItemScheme(BaseModel):
