@@ -24,6 +24,8 @@ from database.models.carts import (
     Cart,
     CartItem,
 )
+from database.models.orders import OrderModel, OrderItemModel, OrderStatusEnum
+
 from database.session_sqlite import reset_sqlite_database as reset_database
 
 environment = os.getenv("ENVIRONMENT", "developing")
