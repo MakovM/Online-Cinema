@@ -24,4 +24,4 @@ from schemas.accounts import (
     TokenRefreshResponseSchema
 )
 
-from orders import OrderListScheme, OrderItemListScheme
+from schemas.orders import OrderListScheme, OrderItemListScheme
