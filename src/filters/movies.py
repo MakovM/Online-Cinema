@@ -57,6 +57,13 @@ class MovieFilter(Filter):
 
 class GenreFilter(Filter):
     name__ilike: Optional[str] = None
+    
+    class Constants(Filter.Constants):
+        model = Genre
+
 
 class StarFilter(Filter):
     name__ilike: Optional[str] = None
+    
+    class Constants(Filter.Constants):
+        model = Star

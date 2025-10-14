@@ -37,6 +37,42 @@ class GenreSchema(BaseModel):
     }
 
 
+class GenreWithCountSchema(GenreSchema):
+    movie_count: int
+
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "id": 1,
+                    "name": "Action",
+                    "movie_count": 42
+                }
+            ]
+        },
+    }
+
+
+class GenreDetailSchema(GenreSchema):
+    movies: List["MovieListItemSchema"]
+
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "id": 1,
+                    "name": "Action",
+                    "movies": [
+                        movie_item_schema_example,
+                    ]
+                }
+            ]
+        },
+    }
+
+
 class StarSchema(BaseModel):
     id: int
     name: str

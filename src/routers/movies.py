@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_filter import FilterDepends
 from fastapi_pagination import Page, paginate
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -15,12 +15,16 @@ from database.models.movies import (
     Star,
     Director,
     Certification,
+    movie_genres,
 )
 from schemas.movies import (
     MovieDetailSchema,
+    MovieListItemSchema,
     MovieCreateSchema,
     MovieUpdateSchema,
     GenreSchema,
+    GenreWithCountSchema,
+    GenreDetailSchema,
     GenreCreateSchema,
     GenreUpdateSchema,
     StarSchema,
@@ -32,57 +36,68 @@ from filters import MovieFilter, GenreFilter, StarFilter
 router = APIRouter()
 
 
-@router.get("/genres/", response_model=Page[GenreSchema])
+@router.get("/genres/", response_model=Page[GenreWithCountSchema])
 async def get_genres(
-    genre_filter: MovieFilter = FilterDepends(GenreFilter),
+    genre_filter: GenreFilter = FilterDepends(GenreFilter),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Genre)
-    stmt = genre_filter.filter(stmt)
-    stmt = genre_filter.sort(stmt)
+    stmt = genre_filter.filter(
+        select(
+            Genre.id,
+            Genre.name,
+            func.count(movie_genres.c.movie_id).label("movie_count")
+        )
+        .outerjoin(movie_genres, Genre.id == movie_genres.c.genre_id)
+        .group_by(Genre.id, Genre.name)
+        .order_by(Genre.name)
+    )
     result = await db.execute(stmt)
-    genres = result.scalars().all()
-    genres_schemas = [GenreSchema.model_validate(genre) for genre in genres]
-    return paginate(genres_schemas)
+    genres = [
+        GenreWithCountSchema(id=row.id, name=row.name, movie_count=row.movie_count)
+        for row in result.all()
+    ]
+    return paginate(genres)
 
 
 @router.post("/genres/", response_model=GenreSchema, status_code=201)
 async def create_genre(
     genre_data: GenreCreateSchema, db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Genre).where(Genre.name == genre_data.name)
-    result = await db.execute(stmt)
-    existing_genre = result.scalars().first()
-
-    if existing_genre:
+    result = await db.execute(select(Genre).where(Genre.name == genre_data.name))
+    if result.scalars().first():
         raise HTTPException(status_code=400, detail="Genre already exists")
 
     genre = Genre(name=genre_data.name)
     db.add(genre)
     await db.commit()
     await db.refresh(genre)
-
     return GenreSchema.model_validate(genre)
 
 
-@router.get("/genres/{genre_id}/", response_model=GenreSchema)
+@router.get("/genres/{genre_id}/", response_model=GenreDetailSchema)
 async def get_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(Genre).where(Genre.id == genre_id)
-    result = await db.execute(stmt)
+    result = await db.execute(
+        select(Genre)
+        .where(Genre.id == genre_id)
+        .options(joinedload(Genre.movies))
+    )
     genre = result.scalars().first()
 
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
 
-    return GenreSchema.model_validate(genre)
+    return GenreDetailSchema(
+        id=genre.id,
+        name=genre.name,
+        movies=[MovieListItemSchema.model_validate(m) for m in genre.movies]
+    )
 
 
 @router.patch("/genres/{genre_id}/", response_model=GenreSchema)
 async def update_genre(
     genre_id: int, genre_data: GenreUpdateSchema, db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Genre).where(Genre.id == genre_id)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
 
     if not genre:
@@ -93,14 +108,12 @@ async def update_genre(
 
     await db.commit()
     await db.refresh(genre)
-
     return GenreSchema.model_validate(genre)
 
 
 @router.delete("/genres/{genre_id}/", status_code=204)
 async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(Genre).where(Genre.id == genre_id)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
 
     if not genre:
@@ -110,41 +123,58 @@ async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
 
+@router.get("/genres/{genre_id}/movies/", response_model=Page[MovieDetailSchema])
+async def get_movies_by_genre(
+    genre_id: int,
+    movie_filter: MovieFilter = FilterDepends(MovieFilter),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(Movie)
+        .join(movie_genres, Movie.id == movie_genres.c.movie_id)
+        .where(movie_genres.c.genre_id == genre_id)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.directors),
+            joinedload(Movie.stars),
+        )
+    )
+    stmt = movie_filter.filter(stmt)
+    stmt = movie_filter.sort(stmt)
+    
+    result = await db.execute(stmt)
+    movies = result.scalars().unique().all()
+    return paginate([MovieDetailSchema.model_validate(m) for m in movies])
+
+
 @router.get("/stars/", response_model=Page[StarSchema])
 async def get_stars(
     star_filter: StarFilter = FilterDepends(StarFilter),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Star)
-    stmt = star_filter.filter(stmt)
-    stmt = star_filter.sort(stmt)
+    stmt = star_filter.filter(select(Star).order_by(Star.name))
     result = await db.execute(stmt)
     stars = result.scalars().all()
-    stars_schemas = [StarSchema.model_validate(star) for star in stars]
-    return paginate(stars_schemas)
+    return paginate([StarSchema.model_validate(star) for star in stars])
 
 
 @router.post("/stars/", response_model=StarSchema, status_code=201)
 async def create_star(star_data: StarCreateSchema, db: AsyncSession = Depends(get_db)):
-    stmt = select(Star).where(Star.name == star_data.name)
-    result = await db.execute(stmt)
-    existing_star = result.scalars().first()
-
-    if existing_star:
+    result = await db.execute(select(Star).where(Star.name == star_data.name))
+    if result.scalars().first():
         raise HTTPException(status_code=400, detail="Star already exists")
 
     star = Star(name=star_data.name)
     db.add(star)
     await db.commit()
     await db.refresh(star)
-
     return StarSchema.model_validate(star)
 
 
 @router.get("/stars/{star_id}/", response_model=StarSchema)
 async def get_star(star_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(Star).where(Star.id == star_id)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
 
     if not star:
@@ -157,8 +187,7 @@ async def get_star(star_id: int, db: AsyncSession = Depends(get_db)):
 async def update_star(
     star_id: int, star_data: StarUpdateSchema, db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Star).where(Star.id == star_id)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
 
     if not star:
@@ -169,14 +198,12 @@ async def update_star(
 
     await db.commit()
     await db.refresh(star)
-
     return StarSchema.model_validate(star)
 
 
 @router.delete("/stars/{star_id}/", status_code=204)
 async def delete_star(star_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(Star).where(Star.id == star_id)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
 
     if not star:
