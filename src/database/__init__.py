@@ -25,17 +25,6 @@ from database.models.carts import (
     CartItem,
 )
 from database.models.orders import OrderModel, OrderItemModel, OrderStatusEnum
-from database.models.movies import (
-    Movie,
-    Genre,
-    Star,
-    Director,
-    Certification,
-    movie_genres,
-    movie_stars,
-    movie_directors,
-)
-
 
 from database.session_sqlite import reset_sqlite_database as reset_database
 
