@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 from database.models import UserModel
 from database.validators.accounts import (
     validate_password_strength,
@@ -6,37 +6,55 @@ from database.validators.accounts import (
 )
 
 
-class BaseEmailPasswordSchema(BaseModel):
+class UserRegistrationRequestSchema(BaseModel):
     email: EmailStr
     password: str
 
-    model_config = {"from_attributes": True}
-
     @field_validator("email")
     @classmethod
-    def email_lower_and_validate(cls, value):
-        value = value.lower()
+    def validate_email(cls, value):
         return validate_email_external(value)
 
     @field_validator("password")
     @classmethod
-    def validate_password(cls, value):
+    def validate_password(cls, value: str) -> str:
         return validate_password_strength(value)
-
-
-class UserRegistrationRequestSchema(BaseEmailPasswordSchema):
-    pass
 
 
 class UserRegistrationResponseSchema(BaseModel):
     id: int
     email: EmailStr
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
-class UserLoginRequestSchema(BaseEmailPasswordSchema):
-    pass
+class UserActivationRequestSchema(BaseModel):
+    email: EmailStr
+    token: str
+
+
+class MessageResponseSchema(BaseModel):
+    message: str
+
+
+class PasswordResetRequestSchema(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetCompleteRequestSchema(BaseModel):
+    email: EmailStr
+    password: str
+    token: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class UserLoginRequestSchema(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class UserLoginResponseSchema(BaseModel):
@@ -45,27 +63,13 @@ class UserLoginResponseSchema(BaseModel):
     token_type: str = "bearer"
 
 
-class UserActivationRequestSchema(BaseModel):
-    email: EmailStr
-    token: str
-
-
-class PasswordResetRequestSchema(BaseModel):
-    email: EmailStr
-
-
-class PasswordResetCompleteRequestSchema(BaseEmailPasswordSchema):
-    token: str
-
-
 class TokenRefreshRequestSchema(BaseModel):
     refresh_token: str
 
 
 class TokenRefreshResponseSchema(BaseModel):
     access_token: str
-    token_type: str = "bearer"
 
 
-class MessageResponseSchema(BaseModel):
-    message: str
+class AccountsErrorSchema(BaseModel):
+    detail: str
