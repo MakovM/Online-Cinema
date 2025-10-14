@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi_pagination import Page, paginate
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,12 +30,13 @@ from schemas.movies import (
 router = APIRouter(prefix="/movies", tags=["movies"])
 
 
-@router.get("/genres/", response_model=list[GenreSchema])
+@router.get("/genres/", response_model=Page[GenreSchema])
 async def get_genres(db: AsyncSession = Depends(get_db)):
     stmt = select(Genre)
     result = await db.execute(stmt)
     genres = result.scalars().all()
-    return [GenreSchema.model_validate(genre) for genre in genres]
+    genres_schemas = [GenreSchema.model_validate(genre) for genre in genres]
+    return paginate(genres_schemas)
 
 
 @router.post("/genres/", response_model=GenreSchema, status_code=201)
@@ -101,12 +103,13 @@ async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
 
-@router.get("/stars/", response_model=list[StarSchema])
+@router.get("/stars/", response_model=Page[StarSchema])
 async def get_stars(db: AsyncSession = Depends(get_db)):
     stmt = select(Star)
     result = await db.execute(stmt)
     stars = result.scalars().all()
-    return [StarSchema.model_validate(star) for star in stars]
+    stars_schemas = [StarSchema.model_validate(star) for star in stars]
+    return paginate(stars_schemas)
 
 
 @router.post("/stars/", response_model=StarSchema, status_code=201)
@@ -171,7 +174,7 @@ async def delete_star(star_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
 
-@router.get("/", response_model=list[MovieDetailSchema])
+@router.get("/", response_model=Page[MovieDetailSchema])
 async def get_movies(db: AsyncSession = Depends(get_db)):
     stmt = select(Movie).options(
         joinedload(Movie.certification),
@@ -181,7 +184,8 @@ async def get_movies(db: AsyncSession = Depends(get_db)):
     )
     result = await db.execute(stmt)
     movies = result.scalars().unique().all()
-    return [MovieDetailSchema.model_validate(movie) for movie in movies]
+    movies_schemas = [MovieDetailSchema.model_validate(movie) for movie in movies]
+    return paginate(movies_schemas)
 
 
 @router.post("/", response_model=MovieDetailSchema, status_code=201)
