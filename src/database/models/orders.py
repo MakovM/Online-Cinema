@@ -17,7 +17,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base, UserModel, Movie
+from database import Base
+from database.models.accounts import UserModel
+from database.models.movies import Movie
 
 
 class OrderStatusEnum(str, enum.Enum):
@@ -32,7 +34,7 @@ class OrderModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    user: Mapped[UserModel] = relationship("UserModel", back_populates="orders")
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="orders")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -62,6 +64,6 @@ class OrderItemModel(Base):
     movie_id: Mapped[int] = mapped_column(
         ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
     )
-    movie: Mapped[Movie] = relationship("Movie", back_populates="order_items")
+    movie: Mapped[Movie] = relationship("Movie")
 
     price_at_order: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)

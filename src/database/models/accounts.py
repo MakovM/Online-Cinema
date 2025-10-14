@@ -16,14 +16,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
-from database.models import Base
+from database import Base
 from database.validators import accounts as validators
 from security.passwords import hash_password, verify_password
 from security.utils import generate_secure_token
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from database.models.carts import Cart
 
 
 class UserGroupEnum(str, enum.Enum):
@@ -85,6 +81,8 @@ class UserModel(Base):
     )
 
     cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)
+
+    orders: Mapped[List["OrderModel"]] = relationship("OrderModel", back_populates="user")
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"

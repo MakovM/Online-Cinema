@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from sqlalchemy import select
-from database.models import UserGroupModel, UserGroupEnum
+from database.models.accounts import UserGroupModel, UserGroupEnum
 from database.session_postgresql import get_postgresql_db
 from routers import accounts
 
