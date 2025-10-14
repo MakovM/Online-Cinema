@@ -21,6 +21,10 @@ from database.validators import accounts as validators
 from security.passwords import hash_password, verify_password
 from security.utils import generate_secure_token
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from database.models.carts import Cart
+
 
 class UserGroupEnum(str, enum.Enum):
     USER = "user"

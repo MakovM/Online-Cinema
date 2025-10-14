@@ -1,11 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, UniqueConstraint, func, DateTime
+from sqlalchemy import ForeignKey, UniqueConstraint, func, DateTime, DECIMAL
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.models.base import Base
 from database.models.accounts import UserModel
 from database.models.movies import Movie
+from database.validators.carts import validate_cart_item
 
 
 class Cart(Base):
@@ -22,6 +23,19 @@ class Cart(Base):
     items: Mapped[list["CartItem"]] = relationship(
         "CartItem", back_populates="cart", cascade="all, delete-orphan"
     )
+
+    def add_movie(self, movie: Movie) -> None:
+        validate_cart_item(self, movie)
+        self.items.append(CartItem(cart=self, movie=movie))
+
+    def remove_movie(self, movie_id: int) -> None:
+        self.items = [item for item in self.items if item.movie_id != movie_id]
+
+    def clear_cart(self) -> None:
+        self.items.clear()
+
+    def total_price(self) -> float:
+        return sum(item.movie.price for item in self.items)
 
     def __repr__(self):
         return f"<Cart(id={self.id}, user_id={self.user_id})>"
@@ -47,7 +61,6 @@ class CartItem(Base):
     movie: Mapped["Movie"] = relationship("Movie")
 
     __table_args__ = (UniqueConstraint("cart_id", "movie_id", name="uq_cart_movie"),)
-
 
     def __repr__(self):
         return f"<CartItem(id={self.id}, cart_id={self.cart_id}, movie_id={self.movie_id})>"
