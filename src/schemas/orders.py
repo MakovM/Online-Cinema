@@ -15,6 +15,7 @@ class OrderItemListScheme(BaseOrderItemScheme):
 
     model_config = {"from_attributes": True}
 
+
 class BaseOrderScheme(BaseModel):
     user_id: int
     created_at: datetime
