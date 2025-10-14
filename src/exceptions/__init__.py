@@ -1,3 +1,5 @@
-from .token_exceptions import TokenExpiredError, InvalidTokenError
-
-__all__ = ["TokenExpiredError", "InvalidTokenError"]
+from exceptions.security import (
+    BaseSecurityError,
+    InvalidTokenError,
+    TokenExpiredError
+)

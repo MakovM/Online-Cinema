@@ -1,12 +1,23 @@
+from datetime import timedelta, timezone, datetime
+from typing import cast, Optional
+
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
+from sqlalchemy.orm import Session, joinedload
 
-from database.models import UserModel, UserGroupModel, UserGroupEnum
+from config import get_jwt_auth_manager, get_settings, BaseAppSettings
 from database.session_postgresql import get_postgresql_db
 from database import get_db
+from database.models.accounts import (
+    ActivationTokenModel,
+    PasswordResetTokenModel,
+    RefreshTokenModel,
+    UserGroupEnum,
+    UserGroupModel,
+    UserModel,
+)
 from schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
@@ -18,124 +29,283 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     MessageResponseSchema,
+    AccountsErrorSchema
 )
+from exceptions.security import BaseSecurityError
+from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
-from config import get_settings
+from security.passwords import hash_password
 
-
-settings = get_settings()
-jwt_manager = JWTAuthManager(
-    secret_key_access=settings.SECRET_KEY_ACCESS,
-    secret_key_refresh=settings.SECRET_KEY_REFRESH,
-    algorithm=settings.JWT_SIGNING_ALGORITHM,
-)
 
 router = APIRouter()
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserModel]:
+    stmt = select(UserModel).where(UserModel.email == email)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
 @router.post(
     "/register/",
     response_model=UserRegistrationResponseSchema,
-    status_code=status.HTTP_201_CREATED,
+    status_code=201,
+    responses={
+        409: {
+            "model": AccountsErrorSchema,
+            "description": "A user with the same email already exists."
+        },
+        500: {
+            "model": AccountsErrorSchema,
+            "description": "An error occurred during user creation."}
+    }
 )
-async def register_user(
-    user_data: UserRegistrationRequestSchema, db: AsyncSession = Depends(get_postgresql_db)
-):
-    stmt = select(UserModel).where(UserModel.email == user_data.email)
-    result = await db.execute(stmt)
-    if result.scalars().first():
-        raise HTTPException(status_code=409, detail="User with this email already exists.")
+async def user_register(user: UserRegistrationRequestSchema, db: AsyncSession = Depends(get_db)):
+    db_user = await get_user_by_email(db, user.email)
+    if db_user:
+        raise HTTPException(status_code=409, detail=f"A user with this email {user.email} already exists.")
 
-    stmt_group = select(UserGroupModel).where(UserGroupModel.name == UserGroupEnum.USER)
-    result_group = await db.execute(stmt_group)
-    user_group = result_group.scalars().first()
-    if not user_group:
-        raise HTTPException(status_code=500, detail="Default user group missing.")
+    user_group_stmt = select(UserGroupModel.id).where(UserGroupModel.name == UserGroupEnum.USER)
+    user_group_id = await db.scalar(user_group_stmt)
 
-    new_user = UserModel(email=user_data.email, group_id=user_group.id)
-    new_user.password = user_data.password
+    try:
+        new_user = UserModel.create(
+            email=user.email,
+            raw_password=user.password,
+            group_id=user_group_id
+        )
+        db.add(new_user)
+        await db.flush()
 
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+        user_token = ActivationTokenModel(user=new_user)
+        db.add(user_token)
+
+        await db.commit()
+        await db.refresh(new_user)
+
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred during user creation.")
 
     return UserRegistrationResponseSchema.model_validate(new_user)
 
 
-@router.post("/activate/", response_model=MessageResponseSchema)
+@router.post(
+    "/activate/",
+    response_model=MessageResponseSchema,
+    responses={
+        400: {
+            "model": AccountsErrorSchema,
+            "description": (
+                "Invalid or expired activation token, "
+                "or user account is already active."
+            ),
+        },
+        500: {
+            "model": AccountsErrorSchema,
+            "description": "Failed to activate user due to a database error.",
+        },
+    }
+)
 async def activate_user(data: UserActivationRequestSchema, db: AsyncSession = Depends(get_db)):
-    stmt = select(UserModel).where(UserModel.email == data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
-    if not user or user.is_active:
-        raise HTTPException(status_code=400, detail="Invalid activation or user already active.")
-    user.is_active = True
-    await db.commit()
-    return MessageResponseSchema(message="User activated successfully.")
+    db_user = await get_user_by_email(db, data.email)
+    if not db_user or db_user.is_active:
+        raise HTTPException(status_code=400, detail="User account is already active or does not exist.")
 
+    stmt_token = select(ActivationTokenModel).where(ActivationTokenModel.user_id == db_user.id)
+    db_token = await db.scalar(stmt_token)
 
-@router.post("/login/", response_model=UserLoginResponseSchema)
-async def login_user(data: UserLoginRequestSchema, db: AsyncSession = Depends(get_postgresql_db)):
-    stmt = select(UserModel).where(UserModel.email == data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
+    if (
+            not db_token
+            or db_token.token != data.token
+            or db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+    ):
+        raise HTTPException(status_code=400, detail="Invalid or expired activation token.")
 
-    if not user or not user.verify_password(data.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="User account not activated.")
-
-    access_token = jwt_manager.create_access_token({"sub": str(user.id)})
-    refresh_token = jwt_manager.create_refresh_token({"sub": str(user.id)})
-
-    return UserLoginResponseSchema(access_token=access_token, refresh_token=refresh_token)
-
-
-@router.post("/password-reset/request/", response_model=MessageResponseSchema)
-async def request_password_reset(
-    data: PasswordResetRequestSchema, db: AsyncSession = Depends(get_db)
-):
-    stmt = select(UserModel).where(UserModel.email == data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
-    if user:
-        user.reset_token = f"reset-{user.id}-{int(datetime.now().timestamp())}"
+    db_user.is_active = True
+    try:
+        await db.delete(db_token)
         await db.commit()
-    return MessageResponseSchema(message="If registered, you will receive reset instructions.")
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to activate user due to a database error.")
+
+    return MessageResponseSchema.model_validate({"message": "User account activated successfully."})
 
 
-@router.post("/reset-password/complete/", response_model=MessageResponseSchema)
-async def reset_password(
-    data: PasswordResetCompleteRequestSchema, db: AsyncSession = Depends(get_db)
+@router.post(
+    "/password-reset/request/",
+    response_model=MessageResponseSchema,
+)
+async def password_reset_token_request(
+    data: PasswordResetRequestSchema,
+    db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(UserModel).where(UserModel.email == data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
-    if not user or getattr(user, "reset_token", None) != data.token:
+    db_user = await get_user_by_email(db, data.email)
+
+    if db_user and db_user.is_active:
+        try:
+            stmt_delete_token = delete(PasswordResetTokenModel).where(
+                PasswordResetTokenModel.user_id == db_user.id
+            )
+            await db.execute(stmt_delete_token)
+
+            token = PasswordResetTokenModel(user=db_user)
+            db.add(token)
+            await db.commit()
+        except SQLAlchemyError:
+            await db.rollback()
+
+    return MessageResponseSchema.model_validate(
+        {"message": "If you are registered, you will receive an email with instructions."}
+    )
+
+
+@router.post(
+    "/reset-password/complete/",
+    response_model=MessageResponseSchema,
+    responses={
+        400: {
+            "model": AccountsErrorSchema,
+            "description": "Invalid email or token."
+        },
+        500: {
+            "model": AccountsErrorSchema,
+            "description": "An error occurred while resetting the password."
+        }
+    }
+)
+async def password_reset_token_completion(
+    data: PasswordResetCompleteRequestSchema,
+    db: AsyncSession = Depends(get_db)
+):
+    db_user = await get_user_by_email(db, data.email)
+
+    if not db_user or not db_user.is_active:
         raise HTTPException(status_code=400, detail="Invalid email or token.")
-    user.password = data.password
-    user.reset_token = None
+
+    stmt_token = select(PasswordResetTokenModel).where(
+        PasswordResetTokenModel.user_id == db_user.id
+    )
+    db_token = await db.scalar(stmt_token)
+
+    if (
+        not db_token
+        or db_token.token != data.token
+        or db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+    ):
+        if db_token:
+            await db.delete(db_token)
+            await db.commit()
+        raise HTTPException(status_code=400, detail="Invalid email or token.")
+
+    try:
+        db_user.password = data.password
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred while resetting the password.")
+
+    await db.delete(db_token)
     await db.commit()
+
     return MessageResponseSchema(message="Password reset successfully.")
 
 
-@router.post("/refresh/", response_model=TokenRefreshResponseSchema)
-async def refresh_token(data: TokenRefreshRequestSchema, db: AsyncSession = Depends(get_db)):
-    try:
-        payload = jwt_manager.decode_refresh_token(data.refresh_token)
-        user_id = int(payload.get("sub"))
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid or expired refresh token: {str(e)}")
+@router.post(
+    "/login/",
+    response_model=UserLoginResponseSchema,
+    status_code=201,
+    responses={
+        401: {
+            "model": AccountsErrorSchema,
+            "description": "Invalid email or password."
+        },
+        403: {
+            "model": AccountsErrorSchema,
+            "description": "User account is not activated."
+        },
+        500: {
+            "model": AccountsErrorSchema,
+            "description": "An error occurred while processing the request."
+        }
+    }
+)
+async def login_user(
+    data: UserLoginRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    settings: BaseAppSettings = Depends(get_settings)
+):
+    db_user = await get_user_by_email(db, data.email)
 
-    stmt = select(UserModel).where(UserModel.id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
-    if not user:
+    if not db_user or not db_user.verify_password(data.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    if not db_user.is_active:
+        raise HTTPException(status_code=403, detail="User account is not activated.")
+
+    payload = {"user_id": db_user.id}
+    access_token = jwt_manager.create_access_token(payload)
+    refresh_token = jwt_manager.create_refresh_token(payload)
+
+    try:
+        db_refresh_token = RefreshTokenModel.create(
+            user_id=db_user.id,
+            days_valid=settings.LOGIN_TIME_DAYS,
+            token=refresh_token
+        )
+        db.add(db_refresh_token)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred while processing the request.")
+
+    return UserLoginResponseSchema(
+        access_token=access_token,
+        refresh_token=refresh_token
+    )
+
+
+@router.post(
+    "/refresh/",
+    response_model=TokenRefreshResponseSchema,
+    responses={
+        400: {
+            "model": AccountsErrorSchema,
+            "description": "Token has expired."
+        },
+        401: {
+            "model": AccountsErrorSchema,
+            "description": "Refresh token not found."
+        },
+        404: {
+            "model": AccountsErrorSchema,
+            "description": "User not found."
+        }
+    }
+)
+async def refresh_token(
+    data: TokenRefreshRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+):
+    try:
+        refresh_payload = jwt_manager.decode_refresh_token(data.refresh_token)
+    except BaseSecurityError:
+        raise HTTPException(status_code=400, detail="Token has expired.")
+
+    stmt_token = select(RefreshTokenModel).where(RefreshTokenModel.token == data.refresh_token)
+    db_token = await db.scalar(stmt_token)
+    if not db_token:
+        raise HTTPException(status_code=401, detail="Refresh token not found.")
+
+    stmt_user = select(UserModel).where(UserModel.id == refresh_payload.get("user_id"))
+    db_user = await db.scalar(stmt_user)
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    try:
-        new_access_token = jwt_manager.create_access_token({"sub": str(user.id)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Token generation failed: {str(e)}")
+    payload = {"user_id": db_user.id}
+    new_access_token = jwt_manager.create_access_token(payload)
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
