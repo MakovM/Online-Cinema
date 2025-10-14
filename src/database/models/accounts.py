@@ -21,6 +21,10 @@ from database.validators import accounts as validators
 from security.passwords import hash_password, verify_password
 from security.utils import generate_secure_token
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from database.models.carts import Cart
+
 
 class UserGroupEnum(str, enum.Enum):
     USER = "user"
@@ -79,6 +83,8 @@ class UserModel(Base):
     profile: Mapped[Optional["UserProfileModel"]] = relationship(
         "UserProfileModel", back_populates="user", cascade="all, delete-orphan"
     )
+
+    cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"

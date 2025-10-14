@@ -1,6 +1,15 @@
 import os
 
 from database.models.base import Base
+from database.models.accounts import (
+    ActivationTokenModel,
+    PasswordResetTokenModel,
+    RefreshTokenModel,
+    UserGroupEnum,
+    UserGroupModel,
+    UserModel,
+    UserProfileModel,
+)
 from database.models.movies import (
     Movie,
     Genre,
@@ -11,15 +20,12 @@ from database.models.movies import (
     movie_stars,
     movie_directors,
 )
-from database.models.accounts import (
-    ActivationTokenModel,
-    PasswordResetTokenModel,
-    RefreshTokenModel,
-    UserGroupEnum,
-    UserGroupModel,
-    UserModel,
-    UserProfileModel,
+from database.models.carts import (
+    Cart,
+    CartItem,
 )
+from database.models.orders import OrderModel, OrderItemModel, OrderStatusEnum
+
 from database.session_sqlite import reset_sqlite_database as reset_database
 
 environment = os.getenv("ENVIRONMENT", "developing")
