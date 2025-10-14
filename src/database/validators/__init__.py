@@ -1,1 +1,4 @@
-from database.validators.accounts import validate_password_strength, validate_email as validate_email_external
+from database.validators.accounts import (
+    validate_password_strength,
+    validate_email as validate_email_external,
+)
