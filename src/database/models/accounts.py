@@ -80,9 +80,12 @@ class UserModel(Base):
         "UserProfileModel", back_populates="user", cascade="all, delete-orphan"
     )
 
-    cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False) # type: ignore[name-defined]
+    cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)  # type: ignore[name-defined]
 
-    orders: Mapped[List["OrderModel"]] = relationship("OrderModel", back_populates="user") # type: ignore[name-defined]
+    orders: Mapped[List["OrderModel"]] = relationship(
+        "OrderModel",
+        back_populates="user"
+    )  # type: ignore[name-defined]
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
