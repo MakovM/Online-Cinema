@@ -82,10 +82,10 @@ class UserModel(Base):
 
     cart: Mapped["Cart"] = relationship("Cart", back_populates="user", uselist=False)  # type: ignore[name-defined]
 
-    orders: Mapped[List["OrderModel"]] = relationship(
+    orders: Mapped[List["OrderModel"]] = relationship(  # type: ignore[name-defined]
         "OrderModel",
         back_populates="user"
-    )  # type: ignore[name-defined]
+    )
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
