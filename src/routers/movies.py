@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi_filter import FilterDepends
 from fastapi_pagination import Page, paginate
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -26,13 +27,19 @@ from schemas.movies import (
     StarCreateSchema,
     StarUpdateSchema,
 )
+from filters import MovieFilter, GenreFilter, StarFilter
 
 router = APIRouter()
 
 
 @router.get("/genres/", response_model=Page[GenreSchema])
-async def get_genres(db: AsyncSession = Depends(get_db)):
+async def get_genres(
+    genre_filter: MovieFilter = FilterDepends(GenreFilter),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(Genre)
+    stmt = genre_filter.filter(stmt)
+    stmt = genre_filter.sort(stmt)
     result = await db.execute(stmt)
     genres = result.scalars().all()
     genres_schemas = [GenreSchema.model_validate(genre) for genre in genres]
@@ -104,8 +111,13 @@ async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/stars/", response_model=Page[StarSchema])
-async def get_stars(db: AsyncSession = Depends(get_db)):
+async def get_stars(
+    star_filter: StarFilter = FilterDepends(StarFilter),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(Star)
+    stmt = star_filter.filter(stmt)
+    stmt = star_filter.sort(stmt)
     result = await db.execute(stmt)
     stars = result.scalars().all()
     stars_schemas = [StarSchema.model_validate(star) for star in stars]
@@ -175,13 +187,18 @@ async def delete_star(star_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/", response_model=Page[MovieDetailSchema])
-async def get_movies(db: AsyncSession = Depends(get_db)):
+async def get_movies(
+    movie_filter: MovieFilter = FilterDepends(MovieFilter),
+    db: AsyncSession = Depends(get_db),
+):
     stmt = select(Movie).options(
         joinedload(Movie.certification),
         joinedload(Movie.genres),
         joinedload(Movie.directors),
         joinedload(Movie.stars),
     )
+    stmt = movie_filter.filter(stmt)
+    stmt = movie_filter.sort(stmt)
     result = await db.execute(stmt)
     movies = result.scalars().unique().all()
     movies_schemas = [MovieDetailSchema.model_validate(movie) for movie in movies]
