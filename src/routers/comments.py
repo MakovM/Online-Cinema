@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from database.models.movies import Comment, Movie
+from database.models.movies import Comment, Movie, Like
 from schemas.movies import CommentCreateSchema, CommentUpdateSchema, CommentSchema
 from security.dependencies import CurrentUser
 
@@ -42,7 +42,7 @@ async def get_movie_comments(
     movie = await db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-
+    
     stmt = select(Comment).where(Comment.movie_id == movie_id)
     result = await db.execute(stmt)
     comments = result.scalars().all()
@@ -86,3 +86,37 @@ async def delete_comment(
 
     await db.delete(comment)
     await db.commit()
+
+
+@router.post("/{comment_id}/toggle-like/", status_code=200)
+async def toggle_comment_like(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    comment = await db.get(Comment, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    stmt = select(Like).where(
+        Like.user_id == current_user.id,
+        Like.likeable_id == comment_id,
+        Like.likeable_type == 'comment'
+    )
+    result = await db.execute(stmt)
+    existing_like = result.scalars().first()
+    
+    if existing_like:
+        await db.delete(existing_like)
+        await db.commit()
+        return {"detail": "Comment unliked successfully", "liked": False}
+    else:
+        like = Like(
+            user_id=current_user.id,
+            likeable_id=comment_id,
+            likeable_type='comment'
+        )
+        db.add(like)
+        await db.commit()
+        await db.refresh(like)
+        return {"detail": "Comment liked successfully", "liked": True}

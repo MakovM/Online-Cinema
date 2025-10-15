@@ -15,7 +15,7 @@ from sqlalchemy import (
     Column,
     Integer,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from database.models.base import Base
