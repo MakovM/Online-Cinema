@@ -22,7 +22,7 @@ async def get_cart(
         .joinedload(CartItem.movie)
         .joinedload(Movie.genres)
     )
-    cart = await db.scalar(cart_stmt)
+    cart: Cart | None = await db.scalar(cart_stmt)
 
     if not cart:
         cart = Cart(user_id=current_user.id)
@@ -36,6 +36,12 @@ async def get_cart(
             .joinedload(Movie.genres)
         )
         cart = await db.scalar(reload_stmt)
+
+    if cart is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve or create cart."
+        )
 
     items_response = [
         CartItemResponse(
@@ -71,7 +77,7 @@ async def get_target_cart(
         .joinedload(CartItem.movie)
         .joinedload(Movie.genres)
     )
-    cart = await db.scalar(cart_stmt)
+    cart: Cart | None = await db.scalar(cart_stmt)
 
     if not cart:
         cart = Cart(user_id=target_user_id)
@@ -85,6 +91,12 @@ async def get_target_cart(
             .joinedload(Movie.genres)
         )
         cart = await db.scalar(reload_stmt)
+
+    if cart is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve or create cart."
+        )
 
     items_response = [
         CartItemResponse(
