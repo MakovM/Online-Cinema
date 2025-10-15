@@ -29,9 +29,10 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     MessageResponseSchema,
-    AccountsErrorSchema,
+    AccountsErrorSchema, ChangePasswordRequestSchema, ChangeUserRoleRequestSchema,
 )
 from exceptions.security import BaseSecurityError
+from security.dependencies import get_current_user, AdminUser
 from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
 from security.passwords import hash_password
@@ -292,3 +293,68 @@ async def refresh_token(
     new_access_token = jwt_manager.create_access_token(payload)
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
+
+@router.post(
+    "/change-password/",
+    response_model=MessageResponseSchema
+)
+async def change_password(
+    data: ChangePasswordRequestSchema,
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponseSchema:
+    if not current_user.verify_password(data.old_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Old password is incorrect.",
+        )
+
+    current_user.password = data.new_password
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the password.",
+        )
+
+    return MessageResponseSchema(message="Password changed successfully.")
+
+
+@router.post("/change-role/", response_model=MessageResponseSchema)
+async def change_user_role(
+        data: ChangeUserRoleRequestSchema,
+        admin: AdminUser = None,
+        db: AsyncSession = Depends(get_db),
+):
+    user_stmt = select(UserModel).where(UserModel.id == data.user_id)
+    user = await db.scalar(user_stmt)
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot change your role.")
+
+    role_stmt = select(UserGroupModel).where(UserGroupModel.name == data.new_role)
+    role = await db.scalar(role_stmt)
+
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found.")
+
+    try:
+        user.group_id = role.id
+        await db.commit()
+        await  db.refresh(user)
+
+    except SQLAlchemyError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the user's role."
+        )
+
+    return MessageResponseSchema(
+        message="User role has been successfully changed."
+    )

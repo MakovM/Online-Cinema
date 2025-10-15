@@ -37,6 +37,8 @@ beautifulsoup4 = "^4.12.3"
 validators = "^0.34.0"
 gunicorn = "^23.0.0"
 async-timeout = "^5.0.1"
+fastapi-filter = "^2.0.1"
+fastapi-pagination = "^0.14.3"
 
 
 [tool.poetry.group.dev.dependencies]
