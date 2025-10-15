@@ -4,7 +4,7 @@ from config import settings
 from abc import ABC, abstractmethod
 
 
-stripe.api_key = settings.Settings.STRIPE_SECRET_KEY
+stripe.api_key = settings.Settings().STRIPE_SECRET_KEY
 
 
 class PaymentInterface(ABC):
@@ -23,8 +23,8 @@ class StripePayment(PaymentInterface):
             mode="payment",
             customer_email=user.email,
             line_items=self.line_items,
-            success_url="http://localhost:8000/payments/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url="http://localhost:8000/payments/cancel",
+            success_url="http://127.0.0.1:8000/api/v1/payments/success/",
+            cancel_url="http://127.0.0.1:8000/api/v1/payments/cancel/",
         )
 
         return session

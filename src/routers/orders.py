@@ -4,7 +4,7 @@ from typing import Optional
 
 import stripe
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,8 +12,9 @@ from sqlalchemy.orm import selectinload
 from database import get_db
 
 from database.models.accounts import UserModel
-from database.models.payments import PaymentItemModel, PaymentModel
+from database.models.payments import PaymentItemModel, PaymentModel, PaymentStatusEnum
 from schemas import OrderListScheme
+from schemas.orders import OrderCreationResponseScheme, OrderListResponseScheme
 from security.dependencies import get_current_user
 
 from database.models.carts import Cart, CartItem
@@ -24,7 +25,11 @@ from utils.payments import StripePayment
 router = APIRouter()
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=OrderCreationResponseScheme,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_order(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user),
@@ -110,13 +115,26 @@ async def create_order(
                 order_item_id=order_item.id,
                 price_at_payment=order_item.price_at_order
             ))
+
+        await db.commit()
+        await db.refresh(order)
+
+        order = await db.execute(
+            select(OrderModel)
+            .options(
+                selectinload(OrderModel.items).selectinload(OrderItemModel.movie),
+                selectinload(OrderModel.payments)
+            )
+            .where(OrderModel.id == order.id)
+        )
+        order = order.scalars().first()
+
     except (SQLAlchemyError, stripe.error.StripeError) as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail="Error occurred.")
-    await db.commit()
-    await db.refresh(order)
+        raise HTTPException(status_code=500, detail="Error occurred.")
 
     return order
+
 
 
 @router.post("/cancel/{order_id}/", status_code=status.HTTP_200_OK)
@@ -126,7 +144,6 @@ async def cancel_order(
     current_user: UserModel = Depends(get_current_user),
 ):
     """Endpoint for cancelling an order"""
-
     order = await db.get(OrderModel, order_id)
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -135,11 +152,22 @@ async def cancel_order(
         raise HTTPException(
             status_code=400, detail="Paid orders cannot be canceled; request a refund instead"
         )
+    if order.status == OrderStatusEnum.CANCELED:
+        raise HTTPException(status_code=400, detail="Order already canceled")
+    try:
+        order.status = OrderStatusEnum.CANCELED
 
-    order.status = OrderStatusEnum.CANCELED
+        await db.execute(
+            update(PaymentModel)
+            .where(PaymentModel.order_id == order_id, PaymentModel.status == PaymentStatusEnum.PENDING)
+            .values(status=PaymentStatusEnum.CANCELED)
+        )
 
-    await db.commit()
-    await db.refresh(order)
+
+        await db.commit()
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     return {"detail": "Order has been canceled successfully."}
 
@@ -147,40 +175,40 @@ async def cancel_order(
 @router.get(
     "/",
     status_code=status.HTTP_200_OK,
-    response_model=list[OrderListScheme],
+    response_model=list[OrderListResponseScheme],
 )
 async def list_orders(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user),
     user_id: Optional[int] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    date_filter: Optional[date] = None,
     status_filter: Optional[OrderStatusEnum] = None,
 ):
-    query = (
-        select(OrderModel)
-        .options(selectinload(OrderModel.items).selectinload(OrderItemModel.movie))
-        .order_by(OrderModel.created_at.desc())
-    )
+    try:
+        query = (
+            select(OrderModel)
+            .options(
+                selectinload(OrderModel.items).selectinload(OrderItemModel.movie),
+                selectinload(OrderModel.payments),
+            )
+            .order_by(OrderModel.created_at.desc())
+        )
 
-    if not current_user.has_group(UserGroupEnum.ADMIN) and not current_user.has_group(
-        UserGroupEnum.MODERATOR
-    ):
-        query = query.where(OrderModel.user_id == current_user.id)
+        if current_user.has_group(UserGroupEnum.ADMIN) or current_user.has_group(
+            UserGroupEnum.MODERATOR
+        ):
+            if user_id:
+                query = query.where(OrderModel.user_id == user_id)
+            if date_filter:
+                query = query.where(func.date(OrderModel.created_at) >= date_filter)
+            if status_filter:
+                query = query.where(OrderModel.status == status_filter)
+        else:
+            query = query.where(OrderModel.user_id == current_user.id)
 
-    if user_id:
-        query = query.where(OrderModel.user_id == user_id)
-
-    if start_date:
-        query = query.where(OrderModel.created_at >= start_date)
-
-    if end_date:
-        query = query.where(OrderModel.created_at <= end_date)
-
-    if status_filter:
-        query = query.where(OrderModel.status == status_filter)
-
-    result = await db.execute(query)
-    orders = result.scalars().unique().all()
+        result = await db.execute(query)
+        orders = result.scalars().unique().all()
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     return orders

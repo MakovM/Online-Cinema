@@ -26,6 +26,7 @@ class OrderStatusEnum(str, enum.Enum):
     PENDING = "pending"
     PAID = "paid"
     CANCELED = "canceled"
+    EXPIRED = "expired"
 
 
 class OrderModel(Base):

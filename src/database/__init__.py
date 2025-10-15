@@ -26,6 +26,7 @@ from database.models.carts import (
     CartItem,
 )
 from database.models.orders import OrderModel, OrderItemModel, OrderStatusEnum
+from database.models.payments import PaymentItemModel, PaymentModel, PaymentStatusEnum
 
 from database.session_sqlite import reset_sqlite_database as reset_database
 
