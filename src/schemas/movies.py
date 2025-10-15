@@ -244,3 +244,12 @@ class CommentSchema(BaseModel):
     user_id: int
 
     model_config = {"from_attributes": True}
+
+
+class LikeSchema(BaseModel):
+    id: int
+    user_id: int
+    likeable_id: int
+    likeable_type: str
+
+    model_config = {"from_attributes": True}
