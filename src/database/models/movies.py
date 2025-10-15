@@ -15,7 +15,7 @@ from sqlalchemy import (
     Column,
     Integer,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from database.models.base import Base
@@ -179,3 +179,15 @@ class Comment(Base):
 
     def __repr__(self):
         return f"<Comment(id={self.id}, movie_id={self.movie_id}, user_id={self.user_id})>"
+
+
+class Like(Base):
+    __tablename__ = "likes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    likeable_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    likeable_type: Mapped[str] = mapped_column(ENUM('movie', 'comment', name='likeable_types'), nullable=False)
+
+    def __repr__(self):
+        return f"<Like(id={self.id}, user_id={self.user_id}, likeable_id={self.likeable_id}, likeable_type='{self.likeable_type}')>"

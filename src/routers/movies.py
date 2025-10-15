@@ -16,6 +16,7 @@ from database.models.movies import (
     Director,
     Certification,
     UserFavorite,
+    Like,
     movie_genres,
 )
 from schemas.movies import (
@@ -467,3 +468,36 @@ async def delete_movie(
     await db.commit()
 
     return {"detail": "Movie deleted successfully."}
+
+@router.post("/{movie_id}/toggle-like/", status_code=200)
+async def toggle_movie_like(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    movie = await db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    stmt = select(Like).where(
+        Like.user_id == current_user.id,
+        Like.likeable_id == movie_id,
+        Like.likeable_type == 'movie'
+    )
+    result = await db.execute(stmt)
+    existing_like = result.scalars().first()
+    
+    if existing_like:
+        await db.delete(existing_like)
+        await db.commit()
+        return {"detail": "Movie unliked successfully", "liked": False}
+    else:
+        like = Like(
+            user_id=current_user.id,
+            likeable_id=movie_id,
+            likeable_type='movie'
+        )
+        db.add(like)
+        await db.commit()
+        await db.refresh(like)
+        return {"detail": "Movie liked successfully", "liked": True}
