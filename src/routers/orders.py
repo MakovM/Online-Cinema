@@ -125,9 +125,8 @@ async def list_orders(
         .order_by(OrderModel.created_at.desc())
     )
 
-    if current_user.group.name not in (UserGroupEnum.ADMIN, UserGroupEnum.MODERATOR):
+    if not current_user.has_group(UserGroupEnum.ADMIN) and not current_user.has_group(UserGroupEnum.MODERATOR):
         query = query.where(OrderModel.user_id == current_user.id)
-
 
     if user_id:
         query = query.where(OrderModel.user_id == user_id)
