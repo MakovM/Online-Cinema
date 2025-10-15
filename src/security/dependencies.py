@@ -9,13 +9,15 @@ from database import get_db
 from database.models.accounts import UserModel
 from security.token_manager import JWTError
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/accounts/login/")
+
 
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-    jwt_manager=Depends(get_jwt_auth_manager),
+    jwt_manager = Depends(get_jwt_auth_manager)
 ) -> UserModel:
     try:
         payload = jwt_manager.decode_access_token(token)
