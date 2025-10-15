@@ -23,5 +23,9 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema
 )
+from schemas.carts import (
+    CartItemCreate,
+    CartResponse
+)
 
 from schemas.orders import OrderListScheme, OrderItemListScheme
