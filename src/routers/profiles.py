@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,13 @@ async def get_profile(
 ):
     profile_stmt = select(UserProfileModel).where(UserProfileModel.user_id == user.id)
     profile = await db.scalar(profile_stmt)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found. Please create a profile first."
+        )
+
     avatar = f"avatars/{profile.user_id}_{profile.avatar}"
     avatar_url = await s3_client.get_file_url(avatar)
 
@@ -75,6 +84,9 @@ async def create_profile(
 
     stmt_current_user = select(UserModel).where(UserModel.id == token_user_id)
     current_user = await db.scalar(stmt_current_user)
+
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user not found.")
 
     stmt_group = select(UserGroupModel.name).where(UserGroupModel.id == current_user.group_id)
     current_user_group = await db.scalar(stmt_group)
