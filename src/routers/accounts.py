@@ -32,6 +32,7 @@ from schemas.accounts import (
     AccountsErrorSchema,
 )
 from exceptions.security import BaseSecurityError
+from security.dependencies import get_current_user
 from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
 from security.passwords import hash_password
@@ -356,3 +357,37 @@ async def refresh_token(
     new_access_token = jwt_manager.create_access_token(payload)
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
+
+
+@router.post(
+    "/logout/",
+    response_model=MessageResponseSchema,
+    responses={
+        401: {
+            "model": AccountsErrorSchema,
+            "description": "Invalid or missing refresh token."
+        },
+        500: {
+            "model": AccountsErrorSchema,
+            "description": "Database error occurred."
+        }
+    }
+)
+async def logout_user(
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt_token = select(RefreshTokenModel).where(RefreshTokenModel.user_id == user.id)
+    db_token = await db.scalar(stmt_token)
+
+    if not db_token:
+        raise HTTPException(status_code=401, detail="Invalid or missing refresh token.")
+
+    try:
+        await db.delete(db_token)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred.")
+
+    return MessageResponseSchema(message="User logged out successfully.")
