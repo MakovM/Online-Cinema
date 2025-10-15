@@ -36,7 +36,6 @@ from security.dependencies import get_current_user
 from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
 from security.passwords import hash_password
-from crud import accounts as crud_accounts
 
 
 router = APIRouter()
@@ -137,69 +136,6 @@ async def activate_user(data: UserActivationRequestSchema, db: AsyncSession = De
         )
 
     return MessageResponseSchema.model_validate({"message": "User account activated successfully."})
-
-
-@router.get(
-    "/users/{user_id}",
-    response_model=UserRegistrationResponseSchema,
-    responses={
-        404: {"model": AccountsErrorSchema, "description": "User not found."},
-        500: {"model": AccountsErrorSchema, "description": "Database error occurred."}
-    }
-)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_postgresql_db)):
-    user = await crud_accounts.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    return user
-
-
-@router.put(
-    "/users/{user_id}/email",
-    response_model=UserRegistrationResponseSchema,
-    responses={
-        404: {"model": AccountsErrorSchema, "description": "User not found."},
-        500: {"model": AccountsErrorSchema, "description": "Database error occurred."}
-    }
-)
-async def update_user_email(user_id: int, new_email: str, db: AsyncSession = Depends(get_postgresql_db)):
-    user = await crud_accounts.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    user = await crud_accounts.update_user_email(db, user, new_email)
-    return user
-
-
-@router.post(
-    "/users/{user_id}/deactivate",
-    response_model=UserRegistrationResponseSchema,
-    responses={
-        404: {"model": AccountsErrorSchema, "description": "User not found."},
-        500: {"model": AccountsErrorSchema, "description": "Database error occurred."}
-    }
-)
-async def deactivate_user(user_id: int, db: AsyncSession = Depends(get_postgresql_db)):
-    user = await crud_accounts.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    user = await crud_accounts.deactivate_user(db, user)
-    return user
-
-
-@router.delete(
-    "/users/{user_id}",
-    response_model=MessageResponseSchema,
-    responses={
-        404: {"model": AccountsErrorSchema, "description": "User not found."},
-        500: {"model": AccountsErrorSchema, "description": "Database error occurred."}
-    }
-)
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_postgresql_db)):
-    user = await crud_accounts.get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    await crud_accounts.delete_user(db, user)
-    return MessageResponseSchema(message="User deleted successfully.")
 
 
 @router.post(
