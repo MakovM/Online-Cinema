@@ -9,6 +9,7 @@ from database.models.accounts import (
     UserGroupModel,
     UserModel,
     UserProfileModel,
+    GenderEnum
 )
 from database.models.movies import (
     Movie,
