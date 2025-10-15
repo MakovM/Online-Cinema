@@ -11,7 +11,6 @@ from database import get_db
 
 from database.models.accounts import UserModel
 from schemas import OrderListScheme
-from schemas.orders import OrderResponseSchema
 from security.dependencies import get_current_user
 
 from database.models.carts import Cart, CartItem
@@ -27,7 +26,10 @@ async def create_order(
 ):
     """Endpoint for creating an order"""
     cart_query = await db.execute(
-        select(CartItem).join(Cart).where(Cart.user_id == current_user.id)
+        select(CartItem)
+        .options(selectinload(CartItem.movie))
+        .join(Cart)
+        .where(Cart.user_id == current_user.id)
     )
     cart_items = cart_query.scalars().all()
     if not cart_items:
@@ -71,7 +73,7 @@ async def create_order(
         )
         db.add(order_item)
         total += Decimal(item.movie.price)
-        db.delete(item)
+        await db.delete(item)
 
     order.total_amount = total
 
@@ -109,7 +111,7 @@ async def cancel_order(
 @router.get(
     "/",
     status_code=status.HTTP_200_OK,
-    response_model=OrderListScheme,
+    response_model=list[OrderListScheme],
 )
 async def list_orders(
     db: AsyncSession = Depends(get_db),
