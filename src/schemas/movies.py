@@ -216,3 +216,13 @@ class StarUpdateSchema(BaseModel):
         if value is None:
             return value
         return value.strip().title()
+
+
+class UserFavoriteSchema(BaseModel):
+    movie: MovieDetailSchema
+
+    model_config = {"from_attributes": True}
+
+
+class UserFavoriteCreateSchema(BaseModel):
+    movie_id: int

@@ -15,6 +15,7 @@ from database.models.movies import (
     Star,
     Director,
     Certification,
+    UserFavorite,
     movie_genres,
 )
 from schemas.movies import (
@@ -28,9 +29,10 @@ from schemas.movies import (
     StarSchema,
     StarCreateSchema,
     StarUpdateSchema,
+    UserFavoriteCreateSchema,
 )
 from filters import MovieFilter, GenreFilter, StarFilter
-from security.dependencies import AdminUser
+from security.dependencies import AdminUser, CurrentUser
 
 router = APIRouter()
 
@@ -216,6 +218,87 @@ async def delete_star(
         raise HTTPException(status_code=404, detail="Star not found")
 
     await db.delete(star)
+    await db.commit()
+
+
+
+@router.get("/favorites/", response_model=Page[MovieDetailSchema])
+async def get_user_favorites(
+    movie_filter: MovieFilter = FilterDepends(MovieFilter),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    stmt = (
+        select(Movie)
+        .join(UserFavorite, Movie.id == UserFavorite.movie_id)
+        .where(UserFavorite.user_id == current_user.id)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.directors),
+            joinedload(Movie.stars),
+        )
+    )
+
+    stmt = movie_filter.filter(stmt)
+    stmt = movie_filter.sort(stmt)
+
+    result = await db.execute(stmt)
+    movies = result.scalars().unique().all()
+
+    return paginate([MovieDetailSchema.model_validate(movie) for movie in movies])
+
+
+@router.post("/favorites/", status_code=201)
+async def add_to_favorites(
+    favorite_data: UserFavoriteCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    movie_stmt = select(Movie).where(Movie.id == favorite_data.movie_id)
+    movie_result = await db.execute(movie_stmt)
+    movie = movie_result.scalars().first()
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    existing_favorite_stmt = select(UserFavorite).where(
+        UserFavorite.user_id == current_user.id,
+        UserFavorite.movie_id == favorite_data.movie_id
+    )
+    existing_favorite_result = await db.execute(existing_favorite_stmt)
+    existing_favorite = existing_favorite_result.scalars().first()
+
+    if existing_favorite:
+        raise HTTPException(status_code=400, detail="Movie is already in favorites")
+
+    favorite = UserFavorite(
+        user_id=current_user.id,
+        movie_id=favorite_data.movie_id
+    )
+    db.add(favorite)
+    await db.commit()
+
+    return {"message": "Movie added to favorites"}
+
+
+@router.delete("/favorites/{movie_id}/", status_code=204)
+async def remove_from_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    favorite_stmt = select(UserFavorite).where(
+        UserFavorite.user_id == current_user.id,
+        UserFavorite.movie_id == movie_id
+    )
+    favorite_result = await db.execute(favorite_stmt)
+    favorite = favorite_result.scalars().first()
+
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Movie not found in favorites")
+
+    await db.delete(favorite)
     await db.commit()
 
 
