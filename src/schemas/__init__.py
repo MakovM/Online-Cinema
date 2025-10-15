@@ -11,6 +11,7 @@ from schemas.movies import (
     MovieUpdateSchema,
 )
 from schemas.accounts import (
+    BaseEmailSchema,
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     UserActivationRequestSchema,
