@@ -166,7 +166,18 @@ async def activate_user(
 
     return MessageResponseSchema.model_validate({"message": "User account activated successfully."})
 
-
+@router.post(
+    "/resend-activation/",
+    response_model=MessageResponseSchema,
+    responses={
+        404: {
+            "description": "Not Found - User with this email does not exist.",
+            "content": {
+                "application/json": {"example": {"detail": "User not found."}}
+            },
+        },
+    },
+)
 async def resend_activation_email(
     background_tasks: BackgroundTasks,
     email_data: BaseEmailSchema,
