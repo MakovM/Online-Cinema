@@ -4,7 +4,7 @@ from celery import Celery
 from celery.schedules import crontab
 
 from celery_conf import celery_app
-from src.tasks import task_for_clean_tokens
+from src.tasks.token_task import task_for_clean_tokens
 
 
 @celery_app.on_after_configure.connect
