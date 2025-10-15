@@ -30,6 +30,7 @@ from schemas.movies import (
     StarUpdateSchema,
 )
 from filters import MovieFilter, GenreFilter, StarFilter
+from security.dependencies import AdminUser
 
 router = APIRouter()
 
@@ -59,7 +60,9 @@ async def get_genres(
 
 @router.post("/genres/", response_model=GenreSchema, status_code=201)
 async def create_genre(
-    genre_data: GenreCreateSchema, db: AsyncSession = Depends(get_db)
+    genre_data: GenreCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.name == genre_data.name))
     if result.scalars().first():
@@ -105,7 +108,10 @@ async def get_genre(
 
 @router.patch("/genres/{genre_id}/", response_model=GenreSchema)
 async def update_genre(
-    genre_id: int, genre_data: GenreUpdateSchema, db: AsyncSession = Depends(get_db)
+    genre_id: int,
+    genre_data: GenreUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
@@ -122,7 +128,11 @@ async def update_genre(
 
 
 @router.delete("/genres/{genre_id}/", status_code=204)
-async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_genre(
+    genre_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
+):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
 
@@ -145,7 +155,11 @@ async def get_stars(
 
 
 @router.post("/stars/", response_model=StarSchema, status_code=201)
-async def create_star(star_data: StarCreateSchema, db: AsyncSession = Depends(get_db)):
+async def create_star(
+    star_data: StarCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
+):
     result = await db.execute(select(Star).where(Star.name == star_data.name))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="Star already exists")
@@ -170,7 +184,10 @@ async def get_star(star_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/stars/{star_id}/", response_model=StarSchema)
 async def update_star(
-    star_id: int, star_data: StarUpdateSchema, db: AsyncSession = Depends(get_db)
+    star_id: int,
+    star_data: StarUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
@@ -187,7 +204,11 @@ async def update_star(
 
 
 @router.delete("/stars/{star_id}/", status_code=204)
-async def delete_star(star_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_star(
+    star_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
+):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
 
@@ -219,7 +240,9 @@ async def get_movies(
 
 @router.post("/", response_model=MovieDetailSchema, status_code=201)
 async def create_movie(
-    movie_data: MovieCreateSchema, db: AsyncSession = Depends(get_db)
+    movie_data: MovieCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
 ):
     try:
         cert_stmt = select(Certification).where(
@@ -319,7 +342,10 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{movie_id}/", response_model=MovieDetailSchema)
 async def update_movie(
-    movie_id: int, movie_data: MovieUpdateSchema, db: AsyncSession = Depends(get_db)
+    movie_id: int,
+    movie_data: MovieUpdateSchema,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
 ):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
@@ -342,7 +368,11 @@ async def update_movie(
 
 
 @router.delete("/{movie_id}/", status_code=204)
-async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_movie(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = None,
+):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
     movie = result.scalars().first()
