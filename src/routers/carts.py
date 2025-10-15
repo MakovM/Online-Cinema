@@ -17,10 +17,10 @@ async def get_cart(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    cart_stmt = select(Cart).where(Cart.user_id == current_user.id).options(
-        joinedload(Cart.items)
-        .joinedload(CartItem.movie)
-        .joinedload(Movie.genres)
+    cart_stmt = (
+        select(Cart)
+        .where(Cart.user_id == current_user.id)
+        .options(joinedload(Cart.items).joinedload(CartItem.movie).joinedload(Movie.genres))
     )
     cart: Cart | None = await db.scalar(cart_stmt)
 
@@ -30,33 +30,26 @@ async def get_cart(
         await db.commit()
         await db.refresh(cart)
 
-        reload_stmt = select(Cart).where(Cart.id == cart.id).options(
-            joinedload(Cart.items)
-            .joinedload(CartItem.movie)
-            .joinedload(Movie.genres)
+        reload_stmt = (
+            select(Cart)
+            .where(Cart.id == cart.id)
+            .options(joinedload(Cart.items).joinedload(CartItem.movie).joinedload(Movie.genres))
         )
         cart = await db.scalar(reload_stmt)
 
     if cart is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve or create cart."
+            detail="Failed to retrieve or create cart.",
         )
 
     items_response = [
-        CartItemResponse(
-            id=item.id,
-            movie=item.movie,
-            added_at=item.added_at
-        )
+        CartItemResponse(id=item.id, movie=item.movie, added_at=item.added_at)
         for item in cart.items
     ]
 
     return CartResponse(
-        id=cart.id,
-        user_id=current_user.id,
-        items=items_response,
-        total_price=cart.total_price()
+        id=cart.id, user_id=current_user.id, items=items_response, total_price=cart.total_price()
     )
 
 
@@ -66,16 +59,15 @@ async def get_target_cart(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    if not current_user.has_group(UserGroupEnum.MODERATOR) and not current_user.has_group(UserGroupEnum.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied!"
-        )
+    if not current_user.has_group(UserGroupEnum.MODERATOR) and not current_user.has_group(
+        UserGroupEnum.ADMIN
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied!")
 
-    cart_stmt = select(Cart).where(Cart.user_id == target_user_id).options(
-        joinedload(Cart.items)
-        .joinedload(CartItem.movie)
-        .joinedload(Movie.genres)
+    cart_stmt = (
+        select(Cart)
+        .where(Cart.user_id == target_user_id)
+        .options(joinedload(Cart.items).joinedload(CartItem.movie).joinedload(Movie.genres))
     )
     cart: Cart | None = await db.scalar(cart_stmt)
 
@@ -85,36 +77,32 @@ async def get_target_cart(
         await db.commit()
         await db.refresh(cart)
 
-        reload_stmt = select(Cart).where(Cart.id == cart.id).options(
-            joinedload(Cart.items)
-            .joinedload(CartItem.movie)
-            .joinedload(Movie.genres)
+        reload_stmt = (
+            select(Cart)
+            .where(Cart.id == cart.id)
+            .options(joinedload(Cart.items).joinedload(CartItem.movie).joinedload(Movie.genres))
         )
         cart = await db.scalar(reload_stmt)
 
     if cart is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve or create cart."
+            detail="Failed to retrieve or create cart.",
         )
 
     items_response = [
-        CartItemResponse(
-            id=item.id,
-            movie=item.movie,
-            added_at=item.added_at
-        )
+        CartItemResponse(id=item.id, movie=item.movie, added_at=item.added_at)
         for item in cart.items
     ]
 
     return CartResponse(
-        id=cart.id,
-        user_id=target_user_id,
-        items=items_response,
-        total_price=cart.total_price()
+        id=cart.id, user_id=target_user_id, items=items_response, total_price=cart.total_price()
     )
 
-@router.post("/items/{item_id}/add/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/items/{item_id}/add/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED
+)
 async def add_item_to_cart(
     item_id: int,
     db: AsyncSession = Depends(get_db),
@@ -148,7 +136,9 @@ async def add_item_to_cart(
         )
 
     item_purchased = await db.scalar(
-        select(OrderItemModel).join(OrderModel).where(
+        select(OrderItemModel)
+        .join(OrderModel)
+        .where(
             OrderModel.user_id == current_user.id,
             OrderItemModel.movie_id == item_id,
         )
@@ -163,7 +153,7 @@ async def add_item_to_cart(
     db.add(cart_item)
     await db.commit()
 
-    item_name = getattr(item_exists, 'title', getattr(item_exists, 'name', 'Item'))
+    item_name = getattr(item_exists, "title", getattr(item_exists, "name", "Item"))
     return MessageResponse(message=f"Item '{item_name}' successfully added to cart.")
 
 
@@ -196,6 +186,7 @@ async def delete_item_from_cart(
     await db.commit()
 
     return MessageResponse(message="Item removed from your cart successfully.")
+
 
 @router.delete("/clear/", response_model=MessageResponse)
 async def cart_clear(
