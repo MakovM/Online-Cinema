@@ -152,13 +152,9 @@ class Movie(Base):
         "Star", secondary=movie_stars, back_populates="movies"
     )
 
-    favorited_by: Mapped[list["UserFavorite"]] = relationship(
-        "UserFavorite", back_populates="movie"
-    )
+    favorited_by: Mapped[list["UserFavorite"]] = relationship("UserFavorite", back_populates="movie")
 
-    __table_args__ = (
-        UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),
-    )
+    __table_args__ = (UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),)
 
     @classmethod
     def default_order_by(cls):
@@ -171,12 +167,8 @@ class Movie(Base):
 class UserFavorite(Base):
     __tablename__ = "user_favorites"
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
-    movie_id: Mapped[int] = mapped_column(
-        ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
 
     user: Mapped["UserModel"] = relationship("UserModel", back_populates="favorites")
     movie: Mapped["Movie"] = relationship("Movie", back_populates="favorited_by")
