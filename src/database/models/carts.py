@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.models.base import Base
 from database.models.accounts import UserModel
 from database.models.movies import Movie
-from database.validators.carts import validate_cart_item
 
 
 class Cart(Base):
@@ -15,7 +14,7 @@ class Cart(Base):
     __tablename__ = "carts"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id : Mapped[int] = mapped_column(
+    user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
 
@@ -23,16 +22,6 @@ class Cart(Base):
     items: Mapped[list["CartItem"]] = relationship(
         "CartItem", back_populates="cart", cascade="all, delete-orphan"
     )
-
-    def add_movie(self, movie: Movie) -> None:
-        validate_cart_item(self, movie)
-        self.items.append(CartItem(cart=self, movie=movie))
-
-    def remove_movie(self, movie_id: int) -> None:
-        self.items = [item for item in self.items if item.movie_id != movie_id]
-
-    def clear_cart(self) -> None:
-        self.items.clear()
 
     def total_price(self) -> float:
         return sum(item.movie.price for item in self.items)
@@ -47,9 +36,7 @@ class CartItem(Base):
     __tablename__ = "cart_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    cart_id: Mapped[int] = mapped_column(
-        ForeignKey("carts.id", ondelete="CASCADE"), nullable=False
-    )
+    cart_id: Mapped[int] = mapped_column(ForeignKey("carts.id", ondelete="CASCADE"), nullable=False)
     movie_id: Mapped[int] = mapped_column(
         ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
     )

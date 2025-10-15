@@ -5,25 +5,32 @@ from datetime import datetime
 from database.models.orders import OrderStatusEnum
 
 
-class BaseOrderItemScheme(BaseModel):
+class OrderItemResponseSchema(BaseModel):
+    id: int
+    price_at_order: Decimal
+
+
+class OrderResponseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    user_id: int
+    created_at: datetime
+    status: OrderStatusEnum
+    items: list[OrderItemResponseSchema]
+
+
+class OrderItemListScheme(BaseModel):
+    model_config = {"from_attributes": True}
+
     movie_id: int
     price_at_order: Decimal
 
 
-class OrderItemListScheme(BaseOrderItemScheme):
-    pass
-
+class OrderListScheme(BaseModel):
     model_config = {"from_attributes": True}
 
-
-class BaseOrderScheme(BaseModel):
-    user_id: int
     created_at: datetime
     status: OrderStatusEnum
     items: list[OrderItemListScheme]
-
-
-class OrderListScheme(BaseOrderScheme):
-    id: int
-
-    model_config = {"from_attributes": True}
+    total_amount: Decimal
