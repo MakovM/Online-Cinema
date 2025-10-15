@@ -19,12 +19,10 @@ from database.models.movies import (
 )
 from schemas.movies import (
     MovieDetailSchema,
-    MovieListItemSchema,
     MovieCreateSchema,
     MovieUpdateSchema,
     GenreSchema,
     GenreWithCountSchema,
-    GenreDetailSchema,
     GenreCreateSchema,
     GenreUpdateSchema,
     StarSchema,
@@ -45,7 +43,7 @@ async def get_genres(
         select(
             Genre.id,
             Genre.name,
-            func.count(movie_genres.c.movie_id).label("movie_count")
+            func.count(movie_genres.c.movie_id).label("movie_count"),
         )
         .outerjoin(movie_genres, Genre.id == movie_genres.c.genre_id)
         .group_by(Genre.id, Genre.name)
@@ -74,23 +72,35 @@ async def create_genre(
     return GenreSchema.model_validate(genre)
 
 
-@router.get("/genres/{genre_id}/", response_model=GenreDetailSchema)
-async def get_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Genre)
-        .where(Genre.id == genre_id)
-        .options(joinedload(Genre.movies))
-    )
-    genre = result.scalars().first()
+@router.get("/genres/{genre_id}/", response_model=Page[MovieDetailSchema])
+async def get_genre(
+    genre_id: int,
+    movie_filter: MovieFilter = FilterDepends(MovieFilter),
+    db: AsyncSession = Depends(get_db),
+):
+    genre_result = await db.execute(select(Genre).where(Genre.id == genre_id))
+    genre = genre_result.scalars().first()
 
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
 
-    return GenreDetailSchema(
-        id=genre.id,
-        name=genre.name,
-        movies=[MovieListItemSchema.model_validate(m) for m in genre.movies]
+    stmt = (
+        select(Movie)
+        .join(movie_genres, Movie.id == movie_genres.c.movie_id)
+        .where(movie_genres.c.genre_id == genre_id)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.directors),
+            joinedload(Movie.stars),
+        )
     )
+    stmt = movie_filter.filter(stmt)
+    stmt = movie_filter.sort(stmt)
+
+    result = await db.execute(stmt)
+    movies = result.scalars().unique().all()
+    return paginate([MovieDetailSchema.model_validate(m) for m in movies])
 
 
 @router.patch("/genres/{genre_id}/", response_model=GenreSchema)
@@ -121,31 +131,6 @@ async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
 
     await db.delete(genre)
     await db.commit()
-
-
-@router.get("/genres/{genre_id}/movies/", response_model=Page[MovieDetailSchema])
-async def get_movies_by_genre(
-    genre_id: int,
-    movie_filter: MovieFilter = FilterDepends(MovieFilter),
-    db: AsyncSession = Depends(get_db),
-):
-    stmt = (
-        select(Movie)
-        .join(movie_genres, Movie.id == movie_genres.c.movie_id)
-        .where(movie_genres.c.genre_id == genre_id)
-        .options(
-            joinedload(Movie.certification),
-            joinedload(Movie.genres),
-            joinedload(Movie.directors),
-            joinedload(Movie.stars),
-        )
-    )
-    stmt = movie_filter.filter(stmt)
-    stmt = movie_filter.sort(stmt)
-    
-    result = await db.execute(stmt)
-    movies = result.scalars().unique().all()
-    return paginate([MovieDetailSchema.model_validate(m) for m in movies])
 
 
 @router.get("/stars/", response_model=Page[StarSchema])

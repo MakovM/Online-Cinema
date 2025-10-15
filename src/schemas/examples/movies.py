@@ -6,16 +6,6 @@ director_schema_example = {"id": 1, "name": "Christopher Nolan"}
 
 certification_schema_example = {"id": 1, "name": "PG-13"}
 
-movie_item_schema_example = {
-    "id": 1,
-    "uuid": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Inception",
-    "year": 2010,
-    "time": 148,
-    "imdb": 8.8,
-    "price": 9.99,
-}
-
 movie_detail_schema_example = {
     "id": 1,
     "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -32,14 +22,6 @@ movie_detail_schema_example = {
     "genres": [genre_schema_example],
     "directors": [director_schema_example],
     "stars": [star_schema_example],
-}
-
-movie_list_response_schema_example = {
-    "movies": [movie_item_schema_example],
-    "prev_page": None,
-    "next_page": "/api/v1/movies/?page=2&limit=20",
-    "total_pages": 5,
-    "total_items": 100,
 }
 
 movie_create_schema_example = {

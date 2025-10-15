@@ -9,8 +9,6 @@ from schemas.examples.movies import (
     genre_schema_example,
     star_schema_example,
     director_schema_example,
-    movie_item_schema_example,
-    movie_list_response_schema_example,
     movie_create_schema_example,
     movie_detail_schema_example,
     movie_update_schema_example,
@@ -54,23 +52,6 @@ class GenreWithCountSchema(GenreSchema):
     }
 
 
-class GenreDetailSchema(GenreSchema):
-    movies: List["MovieListItemSchema"]
-
-    model_config = {
-        "from_attributes": True,
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "id": 1,
-                    "name": "Action",
-                    "movies": [
-                        movie_item_schema_example,
-                    ]
-                }
-            ]
-        },
-    }
 
 
 class StarSchema(BaseModel):
@@ -129,32 +110,6 @@ class MovieDetailSchema(MovieBaseSchema):
     }
 
 
-class MovieListItemSchema(BaseModel):
-    id: int
-    uuid: UUID
-    name: str
-    year: int
-    time: int
-    imdb: float
-    price: float
-
-    model_config = {
-        "from_attributes": True,
-        "json_schema_extra": {"examples": [movie_item_schema_example]},
-    }
-
-
-class MovieListResponseSchema(BaseModel):
-    movies: List[MovieListItemSchema]
-    prev_page: Optional[str]
-    next_page: Optional[str]
-    total_pages: int
-    total_items: int
-
-    model_config = {
-        "from_attributes": True,
-        "json_schema_extra": {"examples": [movie_list_response_schema_example]},
-    }
 
 
 class MovieCreateSchema(BaseModel):
