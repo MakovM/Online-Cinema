@@ -147,3 +147,17 @@ class Movie(Base):
 
     def __repr__(self):
         return f"<Movie(id={self.id}, name='{self.name}', year={self.year})>"
+
+
+class Comment(Base):
+    """Represents a user comment on a movie."""
+
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    def __repr__(self):
+        return f"<Comment(id={self.id}, movie_id={self.movie_id}, user_id={self.user_id})>"
