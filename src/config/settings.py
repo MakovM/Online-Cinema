@@ -36,6 +36,20 @@ class BaseAppSettings(BaseSettings):
     S3_STORAGE_ENDPOINT: str = os.getenv(
         "AWS_S3_ENDPOINT_URL", "https://s3.eu-central-1.amazonaws.com"
     )
+    S3_STORAGE_HOST: str = os.getenv("MINIO_HOST", "minio-theater")
+    S3_STORAGE_PORT: int = int(os.getenv("MINIO_PORT", 9000))
+    S3_STORAGE_ACCESS_KEY: str = os.getenv("MINIO_ROOT_USER", "minioadmin")
+    S3_STORAGE_SECRET_KEY: str = os.getenv("MINIO_ROOT_PASSWORD", "some_password")
+    S3_BUCKET_NAME: str = os.getenv("MINIO_STORAGE", "theater-storage")
+
+    # Stripe Settings
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    @property
+    def S3_STORAGE_ENDPOINT(self) -> str:
+        return f"http://{self.S3_STORAGE_HOST}:{self.S3_STORAGE_PORT}"
 
 
 class Settings(BaseAppSettings):
