@@ -22,7 +22,7 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_order(
-        db: AsyncSession = Depends(get_db), current_user: UserModel = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db), current_user: UserModel = Depends(get_current_user)
 ):
     """Endpoint for creating an order"""
     cart_query = await db.execute(
@@ -44,8 +44,8 @@ async def create_order(
                 OrderItemModel.movie_id == item.movie_id,
                 or_(
                     OrderModel.status == OrderStatusEnum.PENDING,
-                    OrderModel.status == OrderStatusEnum.PAID
-                )
+                    OrderModel.status == OrderStatusEnum.PAID,
+                ),
             )
         )
         if result.scalars().first():
@@ -57,9 +57,7 @@ async def create_order(
         raise HTTPException(status_code=400, detail="No available movies to create order")
 
     order = OrderModel(
-        user_id=current_user.id,
-        status=OrderStatusEnum.PENDING,
-        total_amount=Decimal(0.00)
+        user_id=current_user.id, status=OrderStatusEnum.PENDING, total_amount=Decimal(0.00)
     )
     db.add(order)
     await db.flush()
@@ -67,9 +65,7 @@ async def create_order(
     total = Decimal(0.00)
     for item in available_movies:
         order_item = OrderItemModel(
-            order_id=order.id,
-            movie_id=item.movie_id,
-            price_at_order=Decimal(item.movie.price)
+            order_id=order.id, movie_id=item.movie_id, price_at_order=Decimal(item.movie.price)
         )
         db.add(order_item)
         total += Decimal(item.movie.price)
@@ -87,7 +83,7 @@ async def create_order(
 async def cancel_order(
     order_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user),
 ):
     """Endpoint for cancelling an order"""
     order = await db.get(OrderModel, order_id)
@@ -96,8 +92,7 @@ async def cancel_order(
 
     if order.status == OrderStatusEnum.PAID:
         raise HTTPException(
-            status_code=400,
-            detail="Paid orders cannot be canceled; request a refund instead"
+            status_code=400, detail="Paid orders cannot be canceled; request a refund instead"
         )
 
     order.status = OrderStatusEnum.CANCELED
@@ -105,7 +100,7 @@ async def cancel_order(
     await db.commit()
     await db.refresh(order)
 
-    return {"detail": f"Order has been canceled successfully."}
+    return {"detail": "Order has been canceled successfully."}
 
 
 @router.get(
@@ -127,7 +122,9 @@ async def list_orders(
         .order_by(OrderModel.created_at.desc())
     )
 
-    if not current_user.has_group(UserGroupEnum.ADMIN) and not current_user.has_group(UserGroupEnum.MODERATOR):
+    if not current_user.has_group(UserGroupEnum.ADMIN) and not current_user.has_group(
+        UserGroupEnum.MODERATOR
+    ):
         query = query.where(OrderModel.user_id == current_user.id)
 
     if user_id:

@@ -15,7 +15,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/accounts/login/")
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-    jwt_manager = Depends(get_jwt_auth_manager)
+    jwt_manager=Depends(get_jwt_auth_manager),
 ) -> UserModel:
     try:
         payload = jwt_manager.decode_access_token(token)
@@ -30,7 +30,9 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalid or expired",
         )
-    user_stmt = select(UserModel).where(UserModel.id == user_id).options(selectinload(UserModel.group))
+    user_stmt = (
+        select(UserModel).where(UserModel.id == user_id).options(selectinload(UserModel.group))
+    )
     user = await db.scalar(user_stmt)
 
     if not user or not user.is_active:

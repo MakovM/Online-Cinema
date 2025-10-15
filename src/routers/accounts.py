@@ -29,7 +29,7 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     MessageResponseSchema,
-    AccountsErrorSchema
+    AccountsErrorSchema,
 )
 from exceptions.security import BaseSecurityError
 from security.interfaces import JWTAuthManagerInterface
@@ -53,26 +53,27 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserModel]
     responses={
         409: {
             "model": AccountsErrorSchema,
-            "description": "A user with the same email already exists."
+            "description": "A user with the same email already exists.",
         },
         500: {
             "model": AccountsErrorSchema,
-            "description": "An error occurred during user creation."}
-    }
+            "description": "An error occurred during user creation.",
+        },
+    },
 )
 async def user_register(user: UserRegistrationRequestSchema, db: AsyncSession = Depends(get_db)):
     db_user = await get_user_by_email(db, user.email)
     if db_user:
-        raise HTTPException(status_code=409, detail=f"A user with this email {user.email} already exists.")
+        raise HTTPException(
+            status_code=409, detail=f"A user with this email {user.email} already exists."
+        )
 
     user_group_stmt = select(UserGroupModel.id).where(UserGroupModel.name == UserGroupEnum.USER)
     user_group_id = await db.scalar(user_group_stmt)
 
     try:
         new_user = UserModel.create(
-            email=user.email,
-            raw_password=user.password,
-            group_id=user_group_id
+            email=user.email, raw_password=user.password, group_id=user_group_id
         )
         db.add(new_user)
         await db.flush()
@@ -97,28 +98,29 @@ async def user_register(user: UserRegistrationRequestSchema, db: AsyncSession = 
         400: {
             "model": AccountsErrorSchema,
             "description": (
-                "Invalid or expired activation token, "
-                "or user account is already active."
+                "Invalid or expired activation token, " "or user account is already active."
             ),
         },
         500: {
             "model": AccountsErrorSchema,
             "description": "Failed to activate user due to a database error.",
         },
-    }
+    },
 )
 async def activate_user(data: UserActivationRequestSchema, db: AsyncSession = Depends(get_db)):
     db_user = await get_user_by_email(db, data.email)
     if not db_user or db_user.is_active:
-        raise HTTPException(status_code=400, detail="User account is already active or does not exist.")
+        raise HTTPException(
+            status_code=400, detail="User account is already active or does not exist."
+        )
 
     stmt_token = select(ActivationTokenModel).where(ActivationTokenModel.user_id == db_user.id)
     db_token = await db.scalar(stmt_token)
 
     if (
-            not db_token
-            or db_token.token != data.token
-            or db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+        not db_token
+        or db_token.token != data.token
+        or db_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
     ):
         raise HTTPException(status_code=400, detail="Invalid or expired activation token.")
 
@@ -128,7 +130,9 @@ async def activate_user(data: UserActivationRequestSchema, db: AsyncSession = De
         await db.commit()
     except Exception:
         await db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to activate user due to a database error.")
+        raise HTTPException(
+            status_code=500, detail="Failed to activate user due to a database error."
+        )
 
     return MessageResponseSchema.model_validate({"message": "User account activated successfully."})
 
@@ -138,8 +142,7 @@ async def activate_user(data: UserActivationRequestSchema, db: AsyncSession = De
     response_model=MessageResponseSchema,
 )
 async def password_reset_token_request(
-    data: PasswordResetRequestSchema,
-    db: AsyncSession = Depends(get_db)
+    data: PasswordResetRequestSchema, db: AsyncSession = Depends(get_db)
 ):
     db_user = await get_user_by_email(db, data.email)
 
@@ -165,19 +168,15 @@ async def password_reset_token_request(
     "/reset-password/complete/",
     response_model=MessageResponseSchema,
     responses={
-        400: {
-            "model": AccountsErrorSchema,
-            "description": "Invalid email or token."
-        },
+        400: {"model": AccountsErrorSchema, "description": "Invalid email or token."},
         500: {
             "model": AccountsErrorSchema,
-            "description": "An error occurred while resetting the password."
-        }
-    }
+            "description": "An error occurred while resetting the password.",
+        },
+    },
 )
 async def password_reset_token_completion(
-    data: PasswordResetCompleteRequestSchema,
-    db: AsyncSession = Depends(get_db)
+    data: PasswordResetCompleteRequestSchema, db: AsyncSession = Depends(get_db)
 ):
     db_user = await get_user_by_email(db, data.email)
 
@@ -204,7 +203,9 @@ async def password_reset_token_completion(
         await db.commit()
     except Exception:
         await db.rollback()
-        raise HTTPException(status_code=500, detail="An error occurred while resetting the password.")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while resetting the password."
+        )
 
     await db.delete(db_token)
     await db.commit()
@@ -217,25 +218,19 @@ async def password_reset_token_completion(
     response_model=UserLoginResponseSchema,
     status_code=201,
     responses={
-        401: {
-            "model": AccountsErrorSchema,
-            "description": "Invalid email or password."
-        },
-        403: {
-            "model": AccountsErrorSchema,
-            "description": "User account is not activated."
-        },
+        401: {"model": AccountsErrorSchema, "description": "Invalid email or password."},
+        403: {"model": AccountsErrorSchema, "description": "User account is not activated."},
         500: {
             "model": AccountsErrorSchema,
-            "description": "An error occurred while processing the request."
-        }
-    }
+            "description": "An error occurred while processing the request.",
+        },
+    },
 )
 async def login_user(
     data: UserLoginRequestSchema,
     db: AsyncSession = Depends(get_db),
     jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
-    settings: BaseAppSettings = Depends(get_settings)
+    settings: BaseAppSettings = Depends(get_settings),
 ):
     db_user = await get_user_by_email(db, data.email)
 
@@ -251,39 +246,27 @@ async def login_user(
 
     try:
         db_refresh_token = RefreshTokenModel.create(
-            user_id=db_user.id,
-            days_valid=settings.LOGIN_TIME_DAYS,
-            token=refresh_token
+            user_id=db_user.id, days_valid=settings.LOGIN_TIME_DAYS, token=refresh_token
         )
         db.add(db_refresh_token)
         await db.commit()
     except Exception:
         await db.rollback()
-        raise HTTPException(status_code=500, detail="An error occurred while processing the request.")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while processing the request."
+        )
 
-    return UserLoginResponseSchema(
-        access_token=access_token,
-        refresh_token=refresh_token
-    )
+    return UserLoginResponseSchema(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post(
     "/refresh/",
     response_model=TokenRefreshResponseSchema,
     responses={
-        400: {
-            "model": AccountsErrorSchema,
-            "description": "Token has expired."
-        },
-        401: {
-            "model": AccountsErrorSchema,
-            "description": "Refresh token not found."
-        },
-        404: {
-            "model": AccountsErrorSchema,
-            "description": "User not found."
-        }
-    }
+        400: {"model": AccountsErrorSchema, "description": "Token has expired."},
+        401: {"model": AccountsErrorSchema, "description": "Refresh token not found."},
+        404: {"model": AccountsErrorSchema, "description": "User not found."},
+    },
 )
 async def refresh_token(
     data: TokenRefreshRequestSchema,

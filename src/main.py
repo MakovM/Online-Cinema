@@ -8,7 +8,9 @@ app = FastAPI(title="Cinema Api", description="Description of project")
 
 api_version_prefix = "/api/v1"
 app.include_router(accounts.router, prefix=f"{api_version_prefix}/accounts", tags=["Accounts"])
-app.include_router(carts.router, prefix=f"{api_version_prefix}/shopping-carts", tags=["Shopping Carts"])
+app.include_router(
+    carts.router, prefix=f"{api_version_prefix}/shopping-carts", tags=["Shopping Carts"]
+)
 
 app.include_router(orders.router, prefix=f"{api_version_prefix}/orders", tags=["Orders"])
 
