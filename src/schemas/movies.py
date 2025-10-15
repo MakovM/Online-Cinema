@@ -218,6 +218,16 @@ class StarUpdateSchema(BaseModel):
         return value.strip().title()
 
 
+class UserFavoriteSchema(BaseModel):
+    movie: MovieDetailSchema
+
+    model_config = {"from_attributes": True}
+
+
+class UserFavoriteCreateSchema(BaseModel):
+    movie_id: int
+
+
 class CommentCreateSchema(BaseModel):
     content: str = Field(..., min_length=1, max_length=500)
     movie_id: int = Field(..., gt=0)

@@ -1,5 +1,8 @@
 import uuid as uuid_pkg
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from database.models.accounts import UserModel
 
 from sqlalchemy import (
     String,
@@ -139,6 +142,8 @@ class Movie(Base):
         "Star", secondary=movie_stars, back_populates="movies"
     )
 
+    favorited_by: Mapped[list["UserFavorite"]] = relationship("UserFavorite", back_populates="movie")
+
     __table_args__ = (UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),)
 
     @classmethod
@@ -147,6 +152,19 @@ class Movie(Base):
 
     def __repr__(self):
         return f"<Movie(id={self.id}, name='{self.name}', year={self.year})>"
+
+
+class UserFavorite(Base):
+    __tablename__ = "user_favorites"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True)
+
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="favorites")
+    movie: Mapped["Movie"] = relationship("Movie", back_populates="favorited_by")
+
+    def __repr__(self):
+        return f"<UserFavorite(user_id={self.user_id}, movie_id={self.movie_id})>"
 
 
 class Comment(Base):
