@@ -32,7 +32,7 @@ from schemas.movies import (
     UserFavoriteCreateSchema,
 )
 from filters import MovieFilter, GenreFilter, StarFilter
-from security.dependencies import AdminUser, CurrentUser
+from security.dependencies import AdminUser, CurrentUser, ModerAdminUser
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ async def get_genres(
 async def create_genre(
     genre_data: GenreCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.name == genre_data.name))
     if result.scalars().first():
@@ -113,7 +113,7 @@ async def update_genre(
     genre_id: int,
     genre_data: GenreUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
@@ -133,7 +133,7 @@ async def update_genre(
 async def delete_genre(
     genre_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
@@ -160,7 +160,7 @@ async def get_stars(
 async def create_star(
     star_data: StarCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.name == star_data.name))
     if result.scalars().first():
@@ -189,7 +189,7 @@ async def update_star(
     star_id: int,
     star_data: StarUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
@@ -209,7 +209,7 @@ async def update_star(
 async def delete_star(
     star_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
@@ -325,7 +325,7 @@ async def get_movies(
 async def create_movie(
     movie_data: MovieCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     try:
         cert_stmt = select(Certification).where(
@@ -428,7 +428,7 @@ async def update_movie(
     movie_id: int,
     movie_data: MovieUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
@@ -454,7 +454,7 @@ async def update_movie(
 async def delete_movie(
     movie_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
