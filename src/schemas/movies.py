@@ -237,15 +237,6 @@ class CommentUpdateSchema(BaseModel):
     content: str = Field(..., min_length=1, max_length=500)
 
 
-class CommentSchema(BaseModel):
-    id: int
-    content: str
-    movie_id: int
-    user_id: int
-
-    model_config = {"from_attributes": True}
-
-
 class LikeSchema(BaseModel):
     id: int
     user_id: int
