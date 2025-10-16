@@ -33,7 +33,10 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     MessageResponseSchema,
-    AccountsErrorSchema, ChangePasswordRequestSchema, ChangeUserRoleRequestSchema, BaseEmailSchema,
+    AccountsErrorSchema,
+    ChangePasswordRequestSchema,
+    ChangeUserRoleRequestSchema,
+    BaseEmailSchema,
 )
 from exceptions.security import BaseSecurityError
 from security.dependencies import get_current_user, AdminUser
@@ -409,13 +412,11 @@ async def refresh_token(
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
 
-@router.post(
-    "/change-password/",
-    response_model=MessageResponseSchema
-)
+
+@router.post("/change-password/", response_model=MessageResponseSchema)
 async def change_password(
     data: ChangePasswordRequestSchema,
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     if not current_user.verify_password(data.old_password):
@@ -439,9 +440,9 @@ async def change_password(
 
 @router.post("/change-role/", response_model=MessageResponseSchema)
 async def change_user_role(
-        data: ChangeUserRoleRequestSchema,
-        admin: AdminUser = None,
-        db: AsyncSession = Depends(get_db),
+    data: ChangeUserRoleRequestSchema,
+    admin: AdminUser = None,
+    db: AsyncSession = Depends(get_db),
 ):
     user_stmt = select(UserModel).where(UserModel.id == data.user_id)
     user = await db.scalar(user_stmt)
@@ -450,7 +451,9 @@ async def change_user_role(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     if user.id == admin.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot change your role.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="You cannot change your role."
+        )
 
     role_stmt = select(UserGroupModel).where(UserGroupModel.name == data.new_role)
     role = await db.scalar(role_stmt)
@@ -461,15 +464,13 @@ async def change_user_role(
     try:
         user.group_id = role.id
         await db.commit()
-        await  db.refresh(user)
+        await db.refresh(user)
 
     except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while updating the user's role."
+            detail="An error occurred while updating the user's role.",
         )
 
-    return MessageResponseSchema(
-        message="User role has been successfully changed."
-    )
+    return MessageResponseSchema(message="User role has been successfully changed.")

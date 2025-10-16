@@ -37,28 +37,36 @@ async def create_order(
     """Endpoint for order creation"""
     try:
         cart_items = (
-            await db.execute(
-                select(CartItem)
-                .options(selectinload(CartItem.movie))
-                .join(Cart)
-                .where(Cart.user_id == current_user.id)
+            (
+                await db.execute(
+                    select(CartItem)
+                    .options(selectinload(CartItem.movie))
+                    .join(Cart)
+                    .where(Cart.user_id == current_user.id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not cart_items:
             raise HTTPException(status_code=400, detail="Cart is empty")
 
         movie_ids = [item.movie_id for item in cart_items]
         movies_in_orders = set(
-            (await db.execute(
-                select(OrderItemModel.movie_id)
-                .join(OrderModel)
-                .where(
-                    OrderItemModel.movie_id.in_(movie_ids),
-                    OrderModel.user_id == current_user.id,
-                    OrderModel.status.in_([OrderStatusEnum.PENDING, OrderStatusEnum.PAID])
+            (
+                await db.execute(
+                    select(OrderItemModel.movie_id)
+                    .join(OrderModel)
+                    .where(
+                        OrderItemModel.movie_id.in_(movie_ids),
+                        OrderModel.user_id == current_user.id,
+                        OrderModel.status.in_([OrderStatusEnum.PENDING, OrderStatusEnum.PAID]),
+                    )
                 )
-            )).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
         available_movies = [item for item in cart_items if item.movie_id not in movies_in_orders]
@@ -74,9 +82,7 @@ async def create_order(
         order_items = []
         for item in available_movies:
             order_item = OrderItemModel(
-                order_id=order.id,
-                movie_id=item.movie_id,
-                price_at_order=Decimal(item.movie.price)
+                order_id=order.id, movie_id=item.movie_id, price_at_order=Decimal(item.movie.price)
             )
             db.add(order_item)
             await db.flush()
@@ -104,17 +110,19 @@ async def create_order(
             order_id=order.id,
             amount=total,
             session_id=session.id,
-            session_url=session.url
+            session_url=session.url,
         )
         db.add(payment)
         await db.flush()
 
         for order_item in order_items:
-            db.add(PaymentItemModel(
-                payment_id=payment.id,
-                order_item_id=order_item.id,
-                price_at_payment=order_item.price_at_order
-            ))
+            db.add(
+                PaymentItemModel(
+                    payment_id=payment.id,
+                    order_item_id=order_item.id,
+                    price_at_payment=order_item.price_at_order,
+                )
+            )
 
         await db.commit()
         await db.refresh(order)
@@ -123,18 +131,17 @@ async def create_order(
             select(OrderModel)
             .options(
                 selectinload(OrderModel.items).selectinload(OrderItemModel.movie),
-                selectinload(OrderModel.payments)
+                selectinload(OrderModel.payments),
             )
             .where(OrderModel.id == order.id)
         )
         order = order.scalars().first()
 
-    except (SQLAlchemyError, stripe.error.StripeError) as e:
+    except (SQLAlchemyError, stripe.error.StripeError):
         await db.rollback()
         raise HTTPException(status_code=500, detail="Error occurred.")
 
     return order
-
 
 
 @router.post("/cancel/{order_id}/", status_code=status.HTTP_200_OK)
@@ -159,10 +166,11 @@ async def cancel_order(
 
         await db.execute(
             update(PaymentModel)
-            .where(PaymentModel.order_id == order_id, PaymentModel.status == PaymentStatusEnum.PENDING)
+            .where(
+                PaymentModel.order_id == order_id, PaymentModel.status == PaymentStatusEnum.PENDING
+            )
             .values(status=PaymentStatusEnum.CANCELED)
         )
-
 
         await db.commit()
     except SQLAlchemyError as e:

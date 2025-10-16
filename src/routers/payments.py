@@ -81,8 +81,11 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     if event["type"] in ["checkout.session.completed", "checkout.session.expired"]:
         session = event["data"]["object"]
         session_id = session.get("id")
-        stmt = select(PaymentModel).options(selectinload(PaymentModel.order)).where(
-            PaymentModel.session_id == session_id)
+        stmt = (
+            select(PaymentModel)
+            .options(selectinload(PaymentModel.order))
+            .where(PaymentModel.session_id == session_id)
+        )
         result = await db.execute(stmt)
         payment = result.scalars().first()
 
@@ -100,7 +103,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 async def payment_success(session_id: str):
     """Stripe success URL endpoint"""
 
-    return {"detail": f"Payment successful!"}
+    return {"detail": "Payment successful!"}
 
 
 @router.get("/cancel/", status_code=status.HTTP_200_OK)

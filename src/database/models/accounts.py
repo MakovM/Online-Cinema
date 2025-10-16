@@ -90,7 +90,7 @@ class UserModel(Base):
         "UserFavorite", back_populates="user", cascade="all, delete-orphan"
     )
 
-    payments: Mapped[List["PaymentModel"]] = relationship( # type: ignore[name-defined]
+    payments: Mapped[List["PaymentModel"]] = relationship(  # type: ignore[name-defined]
         "PaymentModel", back_populates="user", cascade="all, delete-orphan"
     )
 

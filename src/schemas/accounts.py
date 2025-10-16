@@ -78,6 +78,7 @@ class TokenRefreshResponseSchema(BaseModel):
 class AccountsErrorSchema(BaseModel):
     detail: str
 
+
 class ChangePasswordRequestSchema(BaseModel):
     old_password: str
     new_password: str
@@ -86,6 +87,7 @@ class ChangePasswordRequestSchema(BaseModel):
     @classmethod
     def validate_password(cls, value):
         return validate_password_strength(value)
+
 
 class ChangeUserRoleRequestSchema(BaseModel):
     user_id: int

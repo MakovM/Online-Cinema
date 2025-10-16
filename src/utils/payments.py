@@ -15,7 +15,7 @@ class PaymentInterface(ABC):
 
 class StripePayment(PaymentInterface):
     def __init__(self, line_items):
-        self.line_items= line_items
+        self.line_items = line_items
 
     def create_session(self, order, user):
         session = stripe.checkout.Session.create(
