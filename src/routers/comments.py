@@ -101,7 +101,7 @@ async def toggle_comment_like(
     stmt = select(Like).where(
         Like.user_id == current_user.id,
         Like.likeable_id == comment_id,
-        Like.likeable_type == "comment",
+        Like.likeable_type == 'comment'
     )
     result = await db.execute(stmt)
     existing_like = result.scalars().first()
@@ -111,8 +111,12 @@ async def toggle_comment_like(
         await db.commit()
         return {"detail": "Comment unliked successfully", "liked": False}
     else:
-        like = Like(user_id=current_user.id, likeable_id=comment_id, likeable_type="comment")
+        like = Like(
+            user_id=current_user.id,
+            likeable_id=comment_id,
+            likeable_type='comment'
+        )
         db.add(like)
         await db.commit()
         await db.refresh(like)
-        return {"detail": "Comment liked successfully", "liked": True}
+        return {"detail": "Comment liked successfully", "liked": True, "like_id": like.id}

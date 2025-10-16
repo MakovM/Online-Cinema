@@ -146,6 +146,10 @@ class Movie(Base):
         "UserFavorite", back_populates="movie"
     )
 
+    comments: Mapped[list["Comment"]] = relationship(
+        "Comment", back_populates="movie", cascade="all, delete-orphan"
+    )
+
     __table_args__ = (UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),)
 
     @classmethod
@@ -184,6 +188,8 @@ class Comment(Base):
         ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    movie: Mapped["Movie"] = relationship("Movie", back_populates="comments")
 
     def __repr__(self):
         return f"<Comment(id={self.id}, movie_id={self.movie_id}, user_id={self.user_id})>"
