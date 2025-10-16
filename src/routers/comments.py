@@ -20,17 +20,17 @@ async def create_comment(
     movie = await db.get(Movie, comment_data.movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-    
+
     comment = Comment(
         content=comment_data.content,
         movie_id=comment_data.movie_id,
         user_id=current_user.id,
     )
-    
+
     db.add(comment)
     await db.commit()
     await db.refresh(comment)
-    
+
     return CommentSchema.model_validate(comment)
 
 
@@ -67,7 +67,7 @@ async def update_comment(
     comment.content = comment_data.content
     await db.commit()
     await db.refresh(comment)
-    
+
     return CommentSchema.model_validate(comment)
 
 
@@ -97,7 +97,7 @@ async def toggle_comment_like(
     comment = await db.get(Comment, comment_id)
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     stmt = select(Like).where(
         Like.user_id == current_user.id,
         Like.likeable_id == comment_id,
@@ -105,7 +105,7 @@ async def toggle_comment_like(
     )
     result = await db.execute(stmt)
     existing_like = result.scalars().first()
-    
+
     if existing_like:
         await db.delete(existing_like)
         await db.commit()
