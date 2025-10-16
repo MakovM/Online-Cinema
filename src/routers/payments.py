@@ -2,17 +2,18 @@ from datetime import date
 from typing import Optional
 
 import stripe
-from stripe import SignatureVerificationError
-from fastapi import APIRouter, Request, HTTPException, status, Depends
+from fastapi import APIRouter, Request, HTTPException, status, Depends, BackgroundTasks
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from config.dependencies import get_accounts_email_notificator
 from database import get_db, OrderStatusEnum, UserModel, UserGroupEnum
 from database.models.payments import PaymentModel, PaymentStatusEnum
 from config.settings import Settings
+from notifications import EmailSenderInterface
 from schemas.payments import PaymentListResponseScheme
 from security.dependencies import get_current_user
 
@@ -63,7 +64,12 @@ async def list_payments(
 
 
 @router.post("/webhook/")
-async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+async def stripe_webhook(
+        background_tasks: BackgroundTasks,
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+):
     """Stripe Webhook endpoint"""
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
@@ -76,7 +82,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         )
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
-    except SignatureVerificationError:
+    except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     if event["type"] in ["checkout.session.completed", "checkout.session.expired"]:
@@ -84,24 +90,36 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         session_id = session.get("id")
         stmt = (
             select(PaymentModel)
-            .options(selectinload(PaymentModel.order))
-            .where(PaymentModel.session_id == session_id)
+            .options(
+                selectinload(PaymentModel.order),
+                selectinload(PaymentModel.user)
+            ).where(PaymentModel.session_id == session_id)
         )
         result = await db.execute(stmt)
         payment = result.scalars().first()
+        try:
+            if payment and payment.status == PaymentStatusEnum.PENDING:
+                if event["type"] == "checkout.session.completed":
+                    payment.status = PaymentStatusEnum.SUCCESSFUL
+                    payment.order.status = OrderStatusEnum.PAID
 
-        if payment and payment.status == PaymentStatusEnum.PENDING:
-            if event["type"] == "checkout.session.completed":
-                payment.status = PaymentStatusEnum.SUCCESSFUL
-                payment.order.status = OrderStatusEnum.PAID
-            else:
-                payment.status = PaymentStatusEnum.EXPIRED
-                payment.order.status = OrderStatusEnum.EXPIRED
-            await db.commit()
+                    email = payment.user.email
+                    background_tasks.add_task(
+                        email_sender.send_purchase_successful_email,
+                        email=email,
+                    )
+
+                else:
+                    payment.status = PaymentStatusEnum.EXPIRED
+                    payment.order.status = OrderStatusEnum.EXPIRED
+                await db.commit()
+        except SQLAlchemyError:
+            await db.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong!")
 
 
 @router.get("/success/", status_code=status.HTTP_200_OK)
-async def payment_success(session_id: str):
+async def payment_success():
     """Stripe success URL endpoint"""
 
     return {"detail": "Payment successful!"}
