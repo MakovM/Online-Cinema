@@ -7,7 +7,7 @@ services:
     environment:
       - POSTGRES_HOST=postgres_cinema
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_cinema_data:/var/lib/postgresql/data/
@@ -73,24 +73,6 @@ services:
     environment:
       - PYTHONPATH=/usr/src/fastapi
       - POSTGRES_HOST=postgres_cinema
-    networks:
-      - cinema_network
-
-  mailhog:
-    restart: always
-    build:
-      context: .
-      dockerfile: ./docker/mailhog/Dockerfile
-    container_name: mailhog_cinema
-    command: ["/bin/bash", "-c", "/commands/setup_mailhog_auth.sh && /go/bin/MailHog"]
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    env_file:
-      - .env
-    environment:
-      MH_AUTH_FILE: /mailhog.auth
-
     networks:
       - cinema_network
 

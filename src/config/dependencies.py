@@ -68,11 +68,11 @@ def get_accounts_email_notificator(
         EmailSenderInterface: An instance of EmailSender configured with the appropriate email settings.
     """
     return EmailSender(
-        hostname=settings.EMAIL_HOST,
-        port=settings.EMAIL_PORT,
-        email=settings.EMAIL_HOST_USER,
-        password=settings.EMAIL_HOST_PASSWORD,
-        use_tls=settings.EMAIL_USE_TLS,
+        hostname=settings.SMTP_HOST,
+        port=settings.SMTP_PORT,
+        email=settings.SMTP_USER,
+        password=settings.SMTP_PASSWORD,
+        use_tls=settings.SMTP_USE_TLS,
         template_dir=settings.PATH_TO_EMAIL_TEMPLATES_DIR,
         activation_email_template_name=settings.ACTIVATION_EMAIL_TEMPLATE_NAME,
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,

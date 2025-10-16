@@ -207,6 +207,7 @@ async def resend_activation_email(
 
     for expired_token in expired_tokens:
         await db.delete(expired_token)
+        await db.commit()
 
     new_token = ActivationTokenModel(user_id=user.id)
     db.add(new_token)
@@ -302,6 +303,13 @@ async def password_reset_token_completion(
     try:
         db_user.password = data.password
         await db.commit()
+
+        login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
+        background_tasks.add_task(
+            email_sender.send_password_reset_complete_email,
+            str(data.email),
+            login_link,
+        )
     except Exception:
         await db.rollback()
         raise HTTPException(
@@ -310,13 +318,6 @@ async def password_reset_token_completion(
 
     await db.delete(db_token)
     await db.commit()
-
-    login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
-    background_tasks.add_task(
-        email_sender.send_password_reset_complete_email,
-        str(data.email),
-        login_link,
-    )
 
     return MessageResponseSchema(message="Password reset successfully.")
 
