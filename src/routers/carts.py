@@ -7,7 +7,7 @@ from database.models.carts import Cart, CartItem
 from database.models.movies import Movie
 from schemas.carts import CartResponse, CartItemResponse, CartItemCreate, MessageResponse
 from database import get_db, UserGroupEnum, OrderItemModel, OrderModel
-from security.dependencies import get_current_user
+from security.dependencies import get_current_user, ModerAdminUser
 
 router = APIRouter(prefix="/cart")
 
@@ -57,13 +57,8 @@ async def get_cart(
 async def get_target_cart(
     target_user_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_admin: ModerAdminUser = None,
 ):
-    if not current_user.has_group(UserGroupEnum.MODERATOR) and not current_user.has_group(
-        UserGroupEnum.ADMIN
-    ):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied!")
-
     cart_stmt = (
         select(Cart)
         .where(Cart.user_id == target_user_id)

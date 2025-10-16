@@ -6,6 +6,10 @@ from database.validators.accounts import (
 )
 
 
+class BaseEmailSchema(BaseModel):
+    email: EmailStr
+
+
 class UserRegistrationRequestSchema(BaseModel):
     email: EmailStr
     password: str

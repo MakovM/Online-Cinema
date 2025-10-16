@@ -15,6 +15,8 @@ from database.models.movies import (
     Star,
     Director,
     Certification,
+    UserFavorite,
+    Like,
     movie_genres,
 )
 from schemas.movies import (
@@ -28,9 +30,10 @@ from schemas.movies import (
     StarSchema,
     StarCreateSchema,
     StarUpdateSchema,
+    UserFavoriteCreateSchema,
 )
 from filters import MovieFilter, GenreFilter, StarFilter
-from security.dependencies import AdminUser
+from security.dependencies import AdminUser, CurrentUser, ModerAdminUser
 
 router = APIRouter()
 
@@ -62,7 +65,7 @@ async def get_genres(
 async def create_genre(
     genre_data: GenreCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.name == genre_data.name))
     if result.scalars().first():
@@ -111,7 +114,7 @@ async def update_genre(
     genre_id: int,
     genre_data: GenreUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
@@ -131,7 +134,7 @@ async def update_genre(
 async def delete_genre(
     genre_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Genre).where(Genre.id == genre_id))
     genre = result.scalars().first()
@@ -158,7 +161,7 @@ async def get_stars(
 async def create_star(
     star_data: StarCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.name == star_data.name))
     if result.scalars().first():
@@ -187,7 +190,7 @@ async def update_star(
     star_id: int,
     star_data: StarUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
@@ -207,7 +210,7 @@ async def update_star(
 async def delete_star(
     star_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     result = await db.execute(select(Star).where(Star.id == star_id))
     star = result.scalars().first()
@@ -216,6 +219,81 @@ async def delete_star(
         raise HTTPException(status_code=404, detail="Star not found")
 
     await db.delete(star)
+    await db.commit()
+
+
+@router.get("/favorites/", response_model=Page[MovieDetailSchema])
+async def get_user_favorites(
+    movie_filter: MovieFilter = FilterDepends(MovieFilter),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    stmt = (
+        select(Movie)
+        .join(UserFavorite, Movie.id == UserFavorite.movie_id)
+        .where(UserFavorite.user_id == current_user.id)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.directors),
+            joinedload(Movie.stars),
+        )
+    )
+
+    stmt = movie_filter.filter(stmt)
+    stmt = movie_filter.sort(stmt)
+
+    result = await db.execute(stmt)
+    movies = result.scalars().unique().all()
+
+    return paginate([MovieDetailSchema.model_validate(movie) for movie in movies])
+
+
+@router.post("/favorites/", status_code=201)
+async def add_to_favorites(
+    favorite_data: UserFavoriteCreateSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    movie_stmt = select(Movie).where(Movie.id == favorite_data.movie_id)
+    movie_result = await db.execute(movie_stmt)
+    movie = movie_result.scalars().first()
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    existing_favorite_stmt = select(UserFavorite).where(
+        UserFavorite.user_id == current_user.id, UserFavorite.movie_id == favorite_data.movie_id
+    )
+    existing_favorite_result = await db.execute(existing_favorite_stmt)
+    existing_favorite = existing_favorite_result.scalars().first()
+
+    if existing_favorite:
+        raise HTTPException(status_code=400, detail="Movie is already in favorites")
+
+    favorite = UserFavorite(user_id=current_user.id, movie_id=favorite_data.movie_id)
+    db.add(favorite)
+    await db.commit()
+
+    return {"message": "Movie added to favorites"}
+
+
+@router.delete("/favorites/{movie_id}/", status_code=204)
+async def remove_from_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    favorite_stmt = select(UserFavorite).where(
+        UserFavorite.user_id == current_user.id, UserFavorite.movie_id == movie_id
+    )
+    favorite_result = await db.execute(favorite_stmt)
+    favorite = favorite_result.scalars().first()
+
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Movie not found in favorites")
+
+    await db.delete(favorite)
     await db.commit()
 
 
@@ -242,12 +320,10 @@ async def get_movies(
 async def create_movie(
     movie_data: MovieCreateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     try:
-        cert_stmt = select(Certification).where(
-            Certification.name == movie_data.certification
-        )
+        cert_stmt = select(Certification).where(Certification.name == movie_data.certification)
         cert_result = await db.execute(cert_stmt)
         certification = cert_result.scalars().first()
 
@@ -345,7 +421,7 @@ async def update_movie(
     movie_id: int,
     movie_data: MovieUpdateSchema,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
@@ -371,7 +447,7 @@ async def update_movie(
 async def delete_movie(
     movie_id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = None,
+    allowed_user: ModerAdminUser = None,
 ):
     stmt = select(Movie).where(Movie.id == movie_id)
     result = await db.execute(stmt)
@@ -384,3 +460,31 @@ async def delete_movie(
     await db.commit()
 
     return {"detail": "Movie deleted successfully."}
+
+
+@router.post("/{movie_id}/toggle-like/", status_code=200)
+async def toggle_movie_like(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = None,
+):
+    movie = await db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    stmt = select(Like).where(
+        Like.user_id == current_user.id, Like.likeable_id == movie_id, Like.likeable_type == "movie"
+    )
+    result = await db.execute(stmt)
+    existing_like = result.scalars().first()
+
+    if existing_like:
+        await db.delete(existing_like)
+        await db.commit()
+        return {"detail": "Movie unliked successfully", "liked": False}
+    else:
+        like = Like(user_id=current_user.id, likeable_id=movie_id, likeable_type="movie")
+        db.add(like)
+        await db.commit()
+        await db.refresh(like)
+        return {"detail": "Movie liked successfully", "liked": True}
