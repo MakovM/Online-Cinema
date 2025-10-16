@@ -307,6 +307,7 @@ async def get_movies(
         joinedload(Movie.genres),
         joinedload(Movie.directors),
         joinedload(Movie.stars),
+        joinedload(Movie.comments),
     )
     stmt = movie_filter.filter(stmt)
     stmt = movie_filter.sort(stmt)
@@ -404,6 +405,7 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
             joinedload(Movie.genres),
             joinedload(Movie.directors),
             joinedload(Movie.stars),
+            joinedload(Movie.comments),
         )
         .where(Movie.id == movie_id)
     )

@@ -86,6 +86,15 @@ class MovieBaseSchema(BaseModel):
         return value
 
 
+class CommentSchema(BaseModel):
+    id: int
+    content: str
+    movie_id: int
+    user_id: int
+
+    model_config = {"from_attributes": True}
+
+
 class MovieDetailSchema(MovieBaseSchema):
     id: int
     uuid: UUID
@@ -93,6 +102,7 @@ class MovieDetailSchema(MovieBaseSchema):
     genres: List[GenreSchema]
     directors: List[DirectorSchema]
     stars: List[StarSchema]
+    comments: List[CommentSchema] = Field(default_factory=list)
 
     model_config = {
         "from_attributes": True,
