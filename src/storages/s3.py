@@ -33,7 +33,7 @@ class S3StorageClient(S3StorageInterface):
             region_name=self._region_name,
         )
 
-    async def upload_file(self, file_name: str, file_data: Union[bytes, bytearray], content_type: str) -> None:
+    async def upload_file(self, file_name: str, file_data: Union[bytes, bytearray], content_type: str | None) -> None:
         """
         Asynchronously upload a file to the S3-compatible storage.
 
