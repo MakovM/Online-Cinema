@@ -263,7 +263,8 @@ async def add_to_favorites(
         raise HTTPException(status_code=404, detail="Movie not found")
 
     existing_favorite_stmt = select(UserFavorite).where(
-        UserFavorite.user_id == current_user.id, UserFavorite.movie_id == favorite_data.movie_id
+        UserFavorite.user_id == current_user.id,
+        UserFavorite.movie_id == favorite_data.movie_id,
     )
     existing_favorite_result = await db.execute(existing_favorite_stmt)
     existing_favorite = existing_favorite_result.scalars().first()
@@ -324,7 +325,9 @@ async def create_movie(
     allowed_user: ModerAdminUser = None,
 ):
     try:
-        cert_stmt = select(Certification).where(Certification.name == movie_data.certification)
+        cert_stmt = select(Certification).where(
+            Certification.name == movie_data.certification
+        )
         cert_result = await db.execute(cert_stmt)
         certification = cert_result.scalars().first()
 
@@ -475,7 +478,9 @@ async def toggle_movie_like(
         raise HTTPException(status_code=404, detail="Movie not found")
 
     stmt = select(Like).where(
-        Like.user_id == current_user.id, Like.likeable_id == movie_id, Like.likeable_type == "movie"
+        Like.user_id == current_user.id,
+        Like.likeable_id == movie_id,
+        Like.likeable_type == "movie",
     )
     result = await db.execute(stmt)
     existing_like = result.scalars().first()
@@ -485,7 +490,11 @@ async def toggle_movie_like(
         await db.commit()
         return {"detail": "Movie unliked successfully", "liked": False}
     else:
-        like = Like(user_id=current_user.id, likeable_id=movie_id, likeable_type="movie")
+        like = Like(
+            user_id=current_user.id,
+            likeable_id=movie_id,
+            likeable_type='movie'
+        )
         db.add(like)
         await db.commit()
         await db.refresh(like)
