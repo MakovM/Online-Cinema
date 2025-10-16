@@ -40,7 +40,9 @@ class GenreWithCountSchema(GenreSchema):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {"examples": [{"id": 1, "name": "Action", "movie_count": 42}]},
+        "json_schema_extra": {
+            "examples": [{"id": 1, "name": "Action", "movie_count": 42}]
+        },
     }
 
 
