@@ -4,12 +4,7 @@ from fastapi import UploadFile, Form, File, HTTPException
 from pydantic import BaseModel, field_validator, HttpUrl, ConfigDict, ValidationError
 
 from database import GenderEnum
-from validation import (
-    validate_name,
-    validate_image,
-    validate_gender,
-    validate_birth_date
-)
+from validation import validate_name, validate_image, validate_gender, validate_birth_date
 
 
 class ProfileRequestSchema(BaseModel):

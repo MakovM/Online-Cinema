@@ -19,15 +19,12 @@ from storages import S3StorageInterface
 
 router = APIRouter()
 
-@router.get(
-    "/me/",
-    response_model=ProfileResponseSchema
-)
+
+@router.get("/me/", response_model=ProfileResponseSchema)
 async def get_profile(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     s3_client: S3StorageInterface = Depends(get_s3_storage_client),
-
 ):
     profile_stmt = select(UserProfileModel).where(UserProfileModel.user_id == user.id)
     profile = await db.scalar(profile_stmt)
@@ -35,7 +32,7 @@ async def get_profile(
     if profile is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found. Please create a profile first."
+            detail="User profile not found. Please create a profile first.",
         )
 
     avatar = f"avatars/{profile.user_id}_{profile.avatar}"
@@ -49,8 +46,9 @@ async def get_profile(
         gender=profile.gender,
         date_of_birth=profile.date_of_birth,
         info=profile.info,
-        avatar=avatar_url
+        avatar=avatar_url,
     )
+
 
 @router.post(
     "/users/{user_id}/profile/",
@@ -58,12 +56,12 @@ async def get_profile(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_profile(
-        user_id: int,
-        data: ProfileRequestSchema = Depends(ProfileRequestSchema.as_form),
-        token: str = Depends(get_token),
-        db: AsyncSession = Depends(get_db),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
-        s3_client: S3StorageInterface = Depends(get_s3_storage_client),
+    user_id: int,
+    data: ProfileRequestSchema = Depends(ProfileRequestSchema.as_form),
+    token: str = Depends(get_token),
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    s3_client: S3StorageInterface = Depends(get_s3_storage_client),
 ):
     try:
         decoded_token = jwt_manager.decode_access_token(token)
@@ -80,13 +78,17 @@ async def create_profile(
     target_user = await db.scalar(stmt_target_user)
 
     if not target_user or not target_user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or not active.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or not active."
+        )
 
     stmt_current_user = select(UserModel).where(UserModel.id == token_user_id)
     current_user = await db.scalar(stmt_current_user)
 
     if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user not found.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user not found."
+        )
 
     stmt_group = select(UserGroupModel.name).where(UserGroupModel.id == current_user.group_id)
     current_user_group = await db.scalar(stmt_group)
@@ -95,16 +97,19 @@ async def create_profile(
     if user_id != token_user_id and not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to edit this profile."
+            detail="You don't have permission to edit this profile.",
         )
 
     stmt_profile = select(UserProfileModel).where(UserProfileModel.user_id == user_id)
     current_profile = await db.scalar(stmt_profile)
 
     if current_profile:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already has a profile.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User already has a profile."
+        )
 
     import logging
+
     logger = logging.getLogger(__name__)
 
     ...
@@ -112,13 +117,15 @@ async def create_profile(
 
     try:
         avatar_bytes = await data.avatar.read()
-        await s3_client.upload_file(file_name=avatar, file_data=avatar_bytes, content_type=data.avatar.content_type)
+        await s3_client.upload_file(
+            file_name=avatar, file_data=avatar_bytes, content_type=data.avatar.content_type
+        )
         avatar_url = await s3_client.get_file_url(avatar)
     except Exception as e:
         logger.exception(f"Avatar upload failed for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upload avatar. Please try again later."
+            detail="Failed to upload avatar. Please try again later.",
         )
 
     # try:
@@ -138,7 +145,7 @@ async def create_profile(
         gender=GenderEnum(data.gender),
         date_of_birth=data.date_of_birth,
         info=data.info,
-        avatar=avatar
+        avatar=avatar,
     )
 
     db.add(profile)
@@ -153,5 +160,5 @@ async def create_profile(
         gender=profile.gender,
         date_of_birth=profile.date_of_birth,
         info=profile.info,
-        avatar=avatar_url
+        avatar=avatar_url,
     )

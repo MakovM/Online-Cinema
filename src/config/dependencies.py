@@ -52,29 +52,15 @@ def get_jwt_auth_manager(
     )
 
 
-def get_s3_storage_client(
-    settings: BaseAppSettings = Depends(get_settings)
-) -> S3StorageInterface:
+def get_s3_storage_client(settings: BaseAppSettings = Depends(get_settings)) -> S3StorageInterface:
     """
     Retrieve an instance of the S3StorageInterface configured with the application settings.
-
     This function instantiates an S3StorageClient using the provided settings, which include the S3 endpoint URL,
     access credentials, and the bucket name. The returned client can be used to interact with an S3-compatible
     storage service for file uploads and URL generation.
-def get_accounts_email_notificator(
-    settings: BaseAppSettings = Depends(get_settings)
-) -> EmailSenderInterface:
-    """
-    Retrieve an instance of the EmailSenderInterface configured with the application settings.
-
-    This function creates an EmailSender using the provided settings, which include details such as the email host,
-    port, credentials, TLS usage, and the directory and filenames for email templates. This allows the application
-    to send various email notifications (e.g., activation, password reset) as required.
-
     Args:
         settings (BaseAppSettings, optional): The application settings,
         provided via dependency injection from `get_settings`.
-
     Returns:
         S3StorageInterface: An instance of S3StorageClient configured with the appropriate S3 storage settings.
     """
@@ -83,7 +69,22 @@ def get_accounts_email_notificator(
         access_key=settings.S3_STORAGE_ACCESS_KEY,
         secret_key=settings.S3_STORAGE_SECRET_KEY,
         bucket_name=settings.S3_BUCKET_NAME,
-        region_name = settings.AWS_REGION,
+        region_name=settings.AWS_REGION,
+    )
+
+
+def get_accounts_email_notificator(
+    settings: BaseAppSettings = Depends(get_settings),
+) -> EmailSenderInterface:
+    """
+    Retrieve an instance of the EmailSenderInterface configured with the application settings.
+    This function creates an EmailSender using the provided settings, which include details such as the email host,
+    port, credentials, TLS usage, and the directory and filenames for email templates. This allows the application
+    to send various email notifications (e.g., activation, password reset) as required.
+    Args:
+        settings (BaseAppSettings, optional): The application settings,
+        provided via dependency injection from `get_settings`.
+    Returns:
         EmailSenderInterface: An instance of EmailSender configured with the appropriate email settings.
     """
     return EmailSender(
@@ -96,5 +97,5 @@ def get_accounts_email_notificator(
         activation_email_template_name=settings.ACTIVATION_EMAIL_TEMPLATE_NAME,
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,
         password_email_template_name=settings.PASSWORD_RESET_TEMPLATE_NAME,
-        password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME
+        password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME,
     )

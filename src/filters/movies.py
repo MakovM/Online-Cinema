@@ -18,7 +18,7 @@ class MovieFilter(Filter):
     - search: Full-text search across name and description
     - order_by: Sort by fields (default: -year, -imdb)
     """
-    
+
     name__ilike: Optional[str] = None
 
     year: Optional[int] = None
@@ -47,7 +47,7 @@ class MovieFilter(Filter):
     order_by: Optional[list[str]] = ["-year", "-imdb"]
 
     search: Optional[str | NoneType] = None
-    
+
     class Constants(Filter.Constants):
         model = Movie
         ordering_field_name = "order_by"
@@ -57,13 +57,13 @@ class MovieFilter(Filter):
 
 class GenreFilter(Filter):
     name__ilike: Optional[str] = None
-    
+
     class Constants(Filter.Constants):
         model = Genre
 
 
 class StarFilter(Filter):
     name__ilike: Optional[str] = None
-    
+
     class Constants(Filter.Constants):
         model = Star

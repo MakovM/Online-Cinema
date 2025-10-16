@@ -4,7 +4,7 @@ from sqlalchemy import select
 from database.models.accounts import UserGroupModel, UserGroupEnum
 from database.session_postgresql import get_postgresql_db
 
-from routers import accounts, movies, orders, carts, profiles
+from routers import accounts, movies, orders, carts, profiles, comments
 
 app = FastAPI(title="Cinema Api", description="Description of project")
 add_pagination(app)

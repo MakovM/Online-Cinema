@@ -10,7 +10,14 @@ from storages import S3StorageInterface
 
 class S3StorageClient(S3StorageInterface):
 
-    def __init__(self, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, region_name: str = "us-east-1"):
+    def __init__(
+        self,
+        endpoint_url: str,
+        access_key: str,
+        secret_key: str,
+        bucket_name: str,
+        region_name: str = "us-east-1",
+    ):
         """
         Initialize the asynchronous S3 Storage Client using an aioboto3 Session.
 
@@ -33,7 +40,9 @@ class S3StorageClient(S3StorageInterface):
             region_name=self._region_name,
         )
 
-    async def upload_file(self, file_name: str, file_data: Union[bytes, bytearray], content_type: str | None) -> None:
+    async def upload_file(
+        self, file_name: str, file_data: Union[bytes, bytearray], content_type: str | None
+    ) -> None:
         """
         Asynchronously upload a file to the S3-compatible storage.
 
@@ -77,4 +86,3 @@ class S3StorageClient(S3StorageInterface):
             str: The full URL to access the file.
         """
         return f"https://{self._bucket_name}.s3.{self._region_name}.amazonaws.com/{file_name}"
-

@@ -9,9 +9,7 @@ from config.dependencies import get_jwt_auth_manager
 from database import get_db
 from database.models.accounts import UserModel, UserGroupEnum
 
-from database.models.accounts import UserModel
 from exceptions import TokenExpiredError, InvalidTokenError
-
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/accounts/login/")
@@ -36,9 +34,7 @@ async def get_current_user(
             detail="Token is invalid or expired",
         )
     user_stmt = (
-        select(UserModel)
-        .where(UserModel.id == user_id)
-        .options(selectinload(UserModel.group))
+        select(UserModel).where(UserModel.id == user_id).options(selectinload(UserModel.group))
     )
     user = await db.scalar(user_stmt)
 

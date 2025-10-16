@@ -21,9 +21,13 @@ def task_for_clean_tokens() -> None:
     print("Clear Start")
     with SyncPostgresqlSessionLocal() as db:
         now_utc = datetime.now(timezone.utc)
-        expired_tokens = db.execute(
-            select(ActivationTokenModel).where(ActivationTokenModel.expires_at < now_utc)
-        ).scalars().all()
+        expired_tokens = (
+            db.execute(
+                select(ActivationTokenModel).where(ActivationTokenModel.expires_at < now_utc)
+            )
+            .scalars()
+            .all()
+        )
 
         for token in expired_tokens:
             db.delete(token)

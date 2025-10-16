@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_URL = "http://127.0.0.1:8000"
 API_VERSION_PREFIX = "/api/v1"
 
+
 class BaseAppSettings(BaseSettings):
     BASE_DIR: Path = Path(__file__).parent.parent
     PATH_TO_DB: str = str(BASE_DIR / "database" / "source" / "theater.db")
@@ -27,13 +28,14 @@ class BaseAppSettings(BaseSettings):
     SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "False").lower() == "true"
     EMAIL_FROM: Optional[str] = os.getenv("EMAIL_FROM", SMTP_USER)
 
-
     AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
     S3_STORAGE_ACCESS_KEY: str = os.getenv("AWS_ACCESS_KEY_ID", "some_key")
     S3_STORAGE_SECRET_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "some_key")
     S3_BUCKET_NAME: str = os.getenv("AWS_S3_BUCKET_NAME", "bucket_storage")
     S3_USE_SSL: bool = os.getenv("AWS_S3_USE_SSL", "False").lower() == "true"
-    S3_STORAGE_ENDPOINT: str = os.getenv("AWS_S3_ENDPOINT_URL", "https://s3.eu-central-1.amazonaws.com")
+    S3_STORAGE_ENDPOINT: str = os.getenv(
+        "AWS_S3_ENDPOINT_URL", "https://s3.eu-central-1.amazonaws.com"
+    )
 
 
 class Settings(BaseAppSettings):
