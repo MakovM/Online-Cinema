@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
-from database.models.accounts import UserModel
+from database.models.accounts import UserModel, UserGroupEnum
 from database.validators.accounts import (
     validate_password_strength,
     validate_email as validate_email_external,
@@ -77,3 +77,16 @@ class TokenRefreshResponseSchema(BaseModel):
 
 class AccountsErrorSchema(BaseModel):
     detail: str
+
+class ChangePasswordRequestSchema(BaseModel):
+    old_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, value):
+        return validate_password_strength(value)
+
+class ChangeUserRoleRequestSchema(BaseModel):
+    user_id: int
+    new_role: UserGroupEnum
