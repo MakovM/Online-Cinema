@@ -20,17 +20,17 @@ async def create_comment(
     movie = await db.get(Movie, comment_data.movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-    
+
     comment = Comment(
         content=comment_data.content,
         movie_id=comment_data.movie_id,
         user_id=current_user.id,
     )
-    
+
     db.add(comment)
     await db.commit()
     await db.refresh(comment)
-    
+
     return CommentSchema.model_validate(comment)
 
 
@@ -42,11 +42,11 @@ async def get_movie_comments(
     movie = await db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-    
+
     stmt = select(Comment).where(Comment.movie_id == movie_id)
     result = await db.execute(stmt)
     comments = result.scalars().all()
-    
+
     return paginate([CommentSchema.model_validate(comment) for comment in comments])
 
 
@@ -67,7 +67,7 @@ async def update_comment(
     comment.content = comment_data.content
     await db.commit()
     await db.refresh(comment)
-    
+
     return CommentSchema.model_validate(comment)
 
 
@@ -101,21 +101,17 @@ async def toggle_comment_like(
     stmt = select(Like).where(
         Like.user_id == current_user.id,
         Like.likeable_id == comment_id,
-        Like.likeable_type == 'comment'
+        Like.likeable_type == "comment",
     )
     result = await db.execute(stmt)
     existing_like = result.scalars().first()
-    
+
     if existing_like:
         await db.delete(existing_like)
         await db.commit()
         return {"detail": "Comment unliked successfully", "liked": False}
     else:
-        like = Like(
-            user_id=current_user.id,
-            likeable_id=comment_id,
-            likeable_type='comment'
-        )
+        like = Like(user_id=current_user.id, likeable_id=comment_id, likeable_type="comment")
         db.add(like)
         await db.commit()
         await db.refresh(like)
