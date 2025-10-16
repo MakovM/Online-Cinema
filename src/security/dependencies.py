@@ -36,7 +36,9 @@ async def get_current_user(
             detail="Token is invalid or expired",
         )
     user_stmt = (
-        select(UserModel).where(UserModel.id == user_id).options(selectinload(UserModel.group))
+        select(UserModel)
+        .where(UserModel.id == user_id)
+        .options(selectinload(UserModel.group))
     )
     user = await db.scalar(user_stmt)
 
@@ -50,7 +52,9 @@ async def get_current_user(
 
 
 def require_role(*allowed_roles: UserGroupEnum):
-    async def check_role(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+    async def check_role(
+        current_user: UserModel = Depends(get_current_user),
+    ) -> UserModel:
         if not any(current_user.has_group(role) for role in allowed_roles):
             roles_str = ", ".join(role.value for role in allowed_roles)
             raise HTTPException(
@@ -58,7 +62,19 @@ def require_role(*allowed_roles: UserGroupEnum):
                 detail=f"Access denied. Required role: {roles_str}",
             )
         return current_user
+
     return check_role
 
+
 CurrentUser = Annotated[UserModel, Depends(get_current_user)]
+ModerUser = Annotated[UserModel, Depends(require_role(UserGroupEnum.MODERATOR))]
 AdminUser = Annotated[UserModel, Depends(require_role(UserGroupEnum.ADMIN))]
+ModerAdminUser = Annotated[
+    UserModel,
+    Depends(
+        require_role(
+            UserGroupEnum.ADMIN,
+            UserGroupEnum.MODERATOR,
+        )
+    ),
+]
