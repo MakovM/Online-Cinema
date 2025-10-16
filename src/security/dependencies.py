@@ -8,7 +8,11 @@ from sqlalchemy.orm import selectinload
 from config.dependencies import get_jwt_auth_manager
 from database import get_db
 from database.models.accounts import UserModel, UserGroupEnum
-from security.token_manager import JWTError
+
+from database.models.accounts import UserModel
+from exceptions import TokenExpiredError, InvalidTokenError
+
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/accounts/login/")
 
@@ -26,7 +30,7 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
             )
-    except JWTError:
+    except (TokenExpiredError, InvalidTokenError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalid or expired",
