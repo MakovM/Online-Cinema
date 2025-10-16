@@ -33,7 +33,7 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
     MessageResponseSchema,
-    AccountsErrorSchema, ChangePasswordRequestSchema, ChangeUserRoleRequestSchema,
+    AccountsErrorSchema, ChangePasswordRequestSchema, ChangeUserRoleRequestSchema, BaseEmailSchema,
 )
 from exceptions.security import BaseSecurityError
 from security.dependencies import get_current_user, AdminUser
