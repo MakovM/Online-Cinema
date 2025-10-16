@@ -216,3 +216,40 @@ class StarUpdateSchema(BaseModel):
         if value is None:
             return value
         return value.strip().title()
+
+
+class UserFavoriteSchema(BaseModel):
+    movie: MovieDetailSchema
+
+    model_config = {"from_attributes": True}
+
+
+class UserFavoriteCreateSchema(BaseModel):
+    movie_id: int
+
+
+class CommentCreateSchema(BaseModel):
+    content: str = Field(..., min_length=1, max_length=500)
+    movie_id: int = Field(..., gt=0)
+
+
+class CommentUpdateSchema(BaseModel):
+    content: str = Field(..., min_length=1, max_length=500)
+
+
+class CommentSchema(BaseModel):
+    id: int
+    content: str
+    movie_id: int
+    user_id: int
+
+    model_config = {"from_attributes": True}
+
+
+class LikeSchema(BaseModel):
+    id: int
+    user_id: int
+    likeable_id: int
+    likeable_type: str
+
+    model_config = {"from_attributes": True}
