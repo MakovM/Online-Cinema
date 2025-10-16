@@ -36,7 +36,8 @@ class PaymentModel(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user: Mapped["UserModel"] = relationship(  # type: ignore[name-defined]
-        "UserModel", back_populates="payments")
+        "UserModel", back_populates="payments"
+    )
 
     order_id: Mapped[int] = mapped_column(
         ForeignKey("orders.id", ondelete="CASCADE"), nullable=False

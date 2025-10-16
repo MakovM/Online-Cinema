@@ -65,10 +65,10 @@ async def list_payments(
 
 @router.post("/webhook/")
 async def stripe_webhook(
-        background_tasks: BackgroundTasks,
-        request: Request,
-        db: AsyncSession = Depends(get_db),
-        email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     """Stripe Webhook endpoint"""
     payload = await request.body()
@@ -82,7 +82,7 @@ async def stripe_webhook(
         )
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
+    except stripe.SignatureVerificationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     if event["type"] in ["checkout.session.completed", "checkout.session.expired"]:
@@ -90,10 +90,8 @@ async def stripe_webhook(
         session_id = session.get("id")
         stmt = (
             select(PaymentModel)
-            .options(
-                selectinload(PaymentModel.order),
-                selectinload(PaymentModel.user)
-            ).where(PaymentModel.session_id == session_id)
+            .options(selectinload(PaymentModel.order), selectinload(PaymentModel.user))
+            .where(PaymentModel.session_id == session_id)
         )
         result = await db.execute(stmt)
         payment = result.scalars().first()
@@ -115,7 +113,9 @@ async def stripe_webhook(
                 await db.commit()
         except SQLAlchemyError:
             await db.rollback()
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong!")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong!"
+            )
 
 
 @router.get("/success/", status_code=status.HTTP_200_OK)

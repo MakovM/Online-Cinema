@@ -325,9 +325,7 @@ async def create_movie(
     allowed_user: ModerAdminUser = None,
 ):
     try:
-        cert_stmt = select(Certification).where(
-            Certification.name == movie_data.certification
-        )
+        cert_stmt = select(Certification).where(Certification.name == movie_data.certification)
         cert_result = await db.execute(cert_stmt)
         certification = cert_result.scalars().first()
 
@@ -490,11 +488,7 @@ async def toggle_movie_like(
         await db.commit()
         return {"detail": "Movie unliked successfully", "liked": False}
     else:
-        like = Like(
-            user_id=current_user.id,
-            likeable_id=movie_id,
-            likeable_type='movie'
-        )
+        like = Like(user_id=current_user.id, likeable_id=movie_id, likeable_type="movie")
         db.add(like)
         await db.commit()
         await db.refresh(like)
