@@ -25,15 +25,13 @@ class BaseAppSettings(BaseSettings):
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
     MAILHOG_API_PORT: int = int(os.getenv("MAILHOG_API_PORT", 8025))
 
-    S3_STORAGE_HOST: str = os.getenv("MINIO_HOST", "minio-theater")
-    S3_STORAGE_PORT: int = int(os.getenv("MINIO_PORT", 9000))
-    S3_STORAGE_ACCESS_KEY: str = os.getenv("MINIO_ROOT_USER", "minioadmin")
-    S3_STORAGE_SECRET_KEY: str = os.getenv("MINIO_ROOT_PASSWORD", "some_password")
-    S3_BUCKET_NAME: str = os.getenv("MINIO_STORAGE", "theater-storage")
 
-    @property
-    def S3_STORAGE_ENDPOINT(self) -> str:
-        return f"http://{self.S3_STORAGE_HOST}:{self.S3_STORAGE_PORT}"
+    AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
+    S3_STORAGE_ACCESS_KEY: str = os.getenv("AWS_ACCESS_KEY_ID", "some_key")
+    S3_STORAGE_SECRET_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "some_key")
+    S3_BUCKET_NAME: str = os.getenv("AWS_S3_BUCKET_NAME", "bucket_storage")
+    S3_USE_SSL: bool = os.getenv("AWS_S3_USE_SSL", "False").lower() == "true"
+    S3_STORAGE_ENDPOINT: str = os.getenv("AWS_S3_ENDPOINT_URL", "https://s3.eu-central-1.amazonaws.com")
 
 
 class Settings(BaseAppSettings):

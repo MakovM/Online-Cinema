@@ -104,16 +104,32 @@ async def create_profile(
     if current_profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already has a profile.")
 
+    import logging
+    logger = logging.getLogger(__name__)
+
+    ...
     avatar = f"avatars/{user_id}_{data.avatar.filename}"
+
     try:
         avatar_bytes = await data.avatar.read()
-        await s3_client.upload_file(file_name=avatar, file_data=avatar_bytes)
+        await s3_client.upload_file(file_name=avatar, file_data=avatar_bytes, content_type=data.avatar.content_type)
         avatar_url = await s3_client.get_file_url(avatar)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Avatar upload failed for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to upload avatar. Please try again later."
         )
+
+    # try:
+    #     avatar_bytes = await data.avatar.read()
+    #     await s3_client.upload_file(file_name=avatar, file_data=avatar_bytes)
+    #     avatar_url = await s3_client.get_file_url(avatar)
+    # except Exception:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail="Failed to upload avatar. Please try again later."
+    #     )
 
     profile = UserProfileModel(
         user_id=user_id,
