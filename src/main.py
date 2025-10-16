@@ -14,6 +14,7 @@ app.include_router(accounts.router, prefix=f"{api_version_prefix}/accounts", tag
 app.include_router(profiles.router, prefix=f"{api_version_prefix}/profiles", tags=["Profiles"])
 
 app.include_router(movies.router, prefix=f"{api_version_prefix}/movies", tags=["Movies"])
+app.include_router(comments.router, prefix=f"{api_version_prefix}/comments", tags=["Comments"])
 app.include_router(
     carts.router, prefix=f"{api_version_prefix}/shopping-carts", tags=["Shopping Carts"]
 )

@@ -5,6 +5,9 @@ from database.validators.accounts import (
     validate_email as validate_email_external,
 )
 
+class BaseEmailSchema(BaseModel):
+    email: EmailStr
+
 
 class UserRegistrationRequestSchema(BaseModel):
     email: EmailStr
