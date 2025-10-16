@@ -137,7 +137,7 @@ async def create_order(
         )
         order = order.scalars().first()
 
-    except (SQLAlchemyError, stripe.error.StripeError):
+    except (SQLAlchemyError, stripe.StripeError):
         await db.rollback()
         raise HTTPException(status_code=500, detail="Error occurred.")
 

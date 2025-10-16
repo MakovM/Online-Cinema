@@ -50,9 +50,9 @@ class Settings(BaseAppSettings):
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
 
     # Stripe Settings
-    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY")
-    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY")
-    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET")
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "stripe_secret")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "stripe_publishable")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "stripe_webhook")
 
     model_config = SettingsConfigDict(
         extra="ignore",

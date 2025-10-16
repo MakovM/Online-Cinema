@@ -2,6 +2,7 @@ from datetime import date
 from typing import Optional
 
 import stripe
+from stripe import SignatureVerificationError
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -75,7 +76,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         )
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
+    except SignatureVerificationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     if event["type"] in ["checkout.session.completed", "checkout.session.expired"]:

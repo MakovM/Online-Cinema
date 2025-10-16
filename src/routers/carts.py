@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from database.models.carts import Cart, CartItem
 from database.models.movies import Movie
 from schemas.carts import CartResponse, CartItemResponse, CartItemCreate, MessageResponse
-from database import get_db, UserGroupEnum, OrderItemModel, OrderModel
+from database import get_db, UserGroupEnum, OrderItemModel, OrderModel, OrderStatusEnum
 from security.dependencies import get_current_user, ModerAdminUser
 
 
