@@ -11,7 +11,6 @@ from config.dependencies import get_accounts_email_notificator
 from config.settings import BASE_URL, API_VERSION_PREFIX
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
-from database.session_postgresql import get_postgresql_db
 from database import get_db
 from database.models.accounts import (
     ActivationTokenModel,
