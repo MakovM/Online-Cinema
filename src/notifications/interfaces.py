@@ -46,3 +46,7 @@ class EmailSenderInterface(ABC):
             login_link (str): The login link to include in the email.
         """
         pass
+
+    @abstractmethod
+    async def send_purchase_successful_email(self, email: str) -> None:
+        pass

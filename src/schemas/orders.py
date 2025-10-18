@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 
 from database.models.orders import OrderStatusEnum
+from schemas.payments import PaymentOrderResponseScheme, PaymentOrderListScheme
 
 
 class OrderItemResponseSchema(BaseModel):
@@ -34,3 +35,11 @@ class OrderListScheme(BaseModel):
     status: OrderStatusEnum
     items: list[OrderItemListScheme]
     total_amount: Decimal
+
+
+class OrderCreationResponseScheme(OrderListScheme):
+    payments: list[PaymentOrderResponseScheme]
+
+
+class OrderListResponseScheme(OrderListScheme):
+    payments: list[PaymentOrderListScheme]

@@ -18,6 +18,7 @@ class BaseAppSettings(BaseSettings):
     ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME: str = "activation_complete.html"
     PASSWORD_RESET_TEMPLATE_NAME: str = "password_reset_request.html"
     PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
+    PURCHASE_SUCCESSFUL_TEMPLATE_NAME: str = "purchase_successful.html"
 
     LOGIN_TIME_DAYS: int = 7
 
@@ -48,6 +49,11 @@ class Settings(BaseAppSettings):
     SECRET_KEY_ACCESS: str = str(os.getenv("SECRET_KEY_ACCESS", os.urandom(32)))
     SECRET_KEY_REFRESH: str = str(os.getenv("SECRET_KEY_REFRESH", os.urandom(32)))
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
+
+    # Stripe Settings
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "stripe_secret_key")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "stripe_publishable_key")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "stripe_webhook_secret")
 
     model_config = SettingsConfigDict(
         extra="ignore",
