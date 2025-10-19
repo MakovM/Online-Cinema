@@ -1,15 +1,13 @@
 from datetime import timedelta, timezone, datetime
 from typing import cast, Optional
 
-from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, status, HTTPException, Request, BackgroundTasks
 from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, joinedload
 
 from tasks.notifications import send_email_task
-
-from config.settings import BASE_URL, API_VERSION_PREFIX
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
 from database import get_db
@@ -69,6 +67,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserModel]
     },
 )
 async def user_register(
+    request: Request,
     user: UserRegistrationRequestSchema,
     db: AsyncSession = Depends(get_db),
 ):
@@ -98,7 +97,7 @@ async def user_register(
         await db.rollback()
         raise HTTPException(status_code=500, detail="An error occurred during user creation.")
 
-    activation_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/activate/?token={user_token.token}&email={user.email}"
+    activation_link = f"{request.url_for('activate_user')}?token={user_token.token}&email={user.email}"
 
     send_email_task.delay(
         method_name="send_activation_email",
@@ -126,6 +125,7 @@ async def user_register(
     },
 )
 async def activate_user(
+    request: Request,
     data: UserActivationRequestSchema,
     db: AsyncSession = Depends(get_db),
 ):
@@ -155,7 +155,7 @@ async def activate_user(
             status_code=500, detail="Failed to activate user due to a database error."
         )
 
-    login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
+    login_link = f"{request.url_for('login')}"
     send_email_task.delay(
         method_name="send_activation_complete_email",
         email=str(data.email),
@@ -176,6 +176,7 @@ async def activate_user(
     },
 )
 async def resend_activation_email(
+    request: Request,
     email_data: BaseEmailSchema,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
@@ -201,7 +202,7 @@ async def resend_activation_email(
     db.add(new_token)
     await db.commit()
 
-    activation_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/activate/?token={new_token.token}&email={user.email}"
+    activation_link = f"{request.url_for('activate_user')}?token={new_token.token}&email={user.email}"
     send_email_task.delay(
         method_name="send_activation_email",
         email=str(user.email),
@@ -215,6 +216,7 @@ async def resend_activation_email(
     response_model=MessageResponseSchema,
 )
 async def password_reset_token_request(
+    request: Request,
     data: PasswordResetRequestSchema,
     db: AsyncSession = Depends(get_db),
 ):
@@ -234,7 +236,7 @@ async def password_reset_token_request(
             await db.rollback()
 
         password_reset_complete_link = (
-            f"{BASE_URL}{API_VERSION_PREFIX}/accounts/password-reset-complete/?token={token.token}"
+            f"{request.url_for('password_reset_token_completion')}?token={token.token}"
         )
 
         send_email_task.delay(
@@ -260,6 +262,7 @@ async def password_reset_token_request(
     },
 )
 async def password_reset_token_completion(
+    request: Request,
     data: PasswordResetCompleteRequestSchema,
     db: AsyncSession = Depends(get_db),
 ):
@@ -287,7 +290,7 @@ async def password_reset_token_completion(
         db_user.password = data.password
         await db.commit()
 
-        login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
+        login_link = f"{request.url_for('login')}"
         send_email_task.delay(
             method_name="send_password_reset_complete_email",
             email=str(data.email),
