@@ -139,8 +139,7 @@ services:
     networks:
       - cinema_network
     depends_on:
-      web:
-        condition: service_healthy
+      - web
 
 volumes:
   postgres_cinema_data:
