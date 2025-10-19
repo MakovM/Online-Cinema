@@ -155,7 +155,7 @@ async def activate_user(
             status_code=500, detail="Failed to activate user due to a database error."
         )
 
-    login_link = f"{request.url_for('login')}"
+    login_link = f"{request.url_for('login_user')}"
     send_email_task.delay(
         method_name="send_activation_complete_email",
         email=str(data.email),
@@ -290,7 +290,7 @@ async def password_reset_token_completion(
         db_user.password = data.password
         await db.commit()
 
-        login_link = f"{request.url_for('login')}"
+        login_link = f"{request.url_for('login_user')}"
         send_email_task.delay(
             method_name="send_password_reset_complete_email",
             email=str(data.email),

@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -141,6 +143,23 @@ async def db_session():
     """
     async with get_db_contextmanager() as session:
         yield session
+
+
+@pytest_asyncio.fixture(scope="function", autouse=True)
+def mock_celery_tasks(monkeypatch):
+    mock_task = MagicMock()
+    TASK_PATH_IN_ROUTER = "routers.accounts.send_email_task"
+
+    try:
+        monkeypatch.setattr(TASK_PATH_IN_ROUTER, mock_task)
+    except Exception as e:
+        print(f"\n--- CELERY MOCKING WARNING ---")
+        print(f"Could not mock task at '{TASK_PATH_IN_ROUTER}'. Check if the path is correct.")
+        print(f"Original error: {e}")
+        print(f"------------------------------\n")
+        pass
+
+    return mock_task
 
 
 @pytest_asyncio.fixture(scope="session")
