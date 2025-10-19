@@ -9,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from config.dependencies import get_accounts_email_notificator
 from database import get_db, OrderStatusEnum, UserModel, UserGroupEnum
 from database.models.payments import PaymentModel, PaymentStatusEnum
 from config.settings import Settings
-from notifications import EmailSenderInterface
 from schemas.payments import PaymentListResponseScheme
 from security.dependencies import get_current_user
+
+from tasks.notifications import send_email_task
 
 router = APIRouter()
 settings = Settings()
@@ -65,10 +65,8 @@ async def list_payments(
 
 @router.post("/webhook/")
 async def stripe_webhook(
-    background_tasks: BackgroundTasks,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     """Stripe Webhook endpoint"""
     payload = await request.body()
@@ -102,8 +100,8 @@ async def stripe_webhook(
                     payment.order.status = OrderStatusEnum.PAID
 
                     email = payment.user.email
-                    background_tasks.add_task(
-                        email_sender.send_purchase_successful_email,
+                    send_email_task.delay(
+                        method_name="send_purchase_successful_email",
                         email=email,
                     )
 

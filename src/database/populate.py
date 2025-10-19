@@ -31,36 +31,16 @@ class CSVDatabaseSeeder:
 
         :return: True if there's already at least one movie in the database, otherwise False.
         """
-        result = await self._db_session.execute(select(UserGroupModel).limit(1))
-        first_movie = result.scalars().first()
-        return first_movie is not None
-
-    async def _seed_user_groups(self) -> None:
-        """
-        Seed the UserGroupModel table with default user groups if none exist.
-
-        This method checks whether any user groups are already present in the database.
-        If no records are found, it inserts all groups defined in the UserGroupEnum.
-        After insertion, the changes are flushed to the current transaction.
-        """
-        print("======== Try to seed user groups ========")
-        count_stmt = select(func.count(UserGroupModel.id))
-        result = await self._db_session.execute(count_stmt)
-        existing_groups = result.scalar()
-
-        if existing_groups == 0:
-            groups = [{"name": group.value} for group in UserGroupEnum]
-            await self._db_session.execute(insert(UserGroupModel).values(groups))
-            await self._db_session.commit()
-
-            print("User groups seeded successfully.")
+        result = await self._db_session.execute(select(UserModel).limit(1))
+        first_admin = result.scalars().first()
+        return first_admin is not None
 
     async def _seed_test_users(self) -> None:
         print("======== Try to seed test users ========")
         result = await self._db_session.execute(select(func.count(UserModel.id)))
         user_count = result.scalar()
 
-        if user_count > 0:
+        if user_count and user_count > 0:
             print("Users already exist. Skipping user seeding.")
             return
 
@@ -108,7 +88,6 @@ class CSVDatabaseSeeder:
                 print("Rolling back existing transaction.")
                 await self._db_session.rollback()
 
-            await self._seed_user_groups()
             await self._seed_test_users()
 
         except SQLAlchemyError as e:
