@@ -40,7 +40,7 @@ class CSVDatabaseSeeder:
         result = await self._db_session.execute(select(func.count(UserModel.id)))
         user_count = result.scalar()
 
-        if user_count > 0:
+        if user_count and user_count > 0:
             print("Users already exist. Skipping user seeding.")
             return
 
