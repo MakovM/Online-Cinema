@@ -10,7 +10,7 @@ from database import get_db, UserGroupEnum, OrderItemModel, OrderModel, OrderSta
 from security.dependencies import get_current_user, ModerAdminUser
 
 
-router = APIRouter(prefix="/cart")
+router = APIRouter(prefix="/carts")
 
 
 @router.get("/", response_model=CartResponse)
