@@ -88,9 +88,8 @@ services:
 
   celery:
     build: .
-    container_name: celery_cinema
+    command: celery -A celery_conf worker --loglevel=info
     working_dir: /usr/src/fastapi
-    command: [ "/bin/bash", "/commands/run_celery_worker.sh" ]
     env_file:
       - .env
     environment:
@@ -99,27 +98,22 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - redis
-      - db
+      - web
     networks:
       - cinema_network
 
   celery-beat:
     build: .
-    container_name: celery_beat
-    working_dir: /usr/src/fastapi
-    command: [ "/bin/bash", "/commands/run_celery_beat.sh" ]
     env_file:
       - .env
     environment:
       - PYTHONPATH=/usr/src/fastapi
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-
-    volumes:
-      - .:/app
+    working_dir: /usr/src/fastapi
+    command: celery -A celery_conf beat --loglevel=info
     depends_on:
       - redis
-      - db
       - celery
     networks:
       - cinema_network
