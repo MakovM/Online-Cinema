@@ -49,6 +49,8 @@ services:
       - PYTHONPATH=/usr/src/fastapi
       - WATCHFILES_FORCE_POLLING=true
       - POSTGRES_HOST=postgres_cinema
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
@@ -75,6 +77,52 @@ services:
     environment:
       - PYTHONPATH=/usr/src/fastapi
       - POSTGRES_HOST=postgres_cinema
+    networks:
+      - cinema_network
+
+  redis:
+    image: redis:latest
+    container_name: redis_movie
+    ports:
+      - "6379:6379"
+    networks:
+      - cinema_network
+
+  celery:
+    build: .
+    container_name: celery_cinema
+    working_dir: /app
+    command: [ "/bin/bash", "/commands/run_celery_worker.sh" ]
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+    networks:
+      - cinema_network
+
+  celery-beat:
+    build: .
+    container_name: celery_beat
+    working_dir: /app
+    command: [ "/bin/bash", "/commands/run_celery_beat.sh" ]
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+      - celery
     networks:
       - cinema_network
 
