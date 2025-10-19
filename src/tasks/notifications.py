@@ -1,6 +1,6 @@
 import asyncio
 from celery_conf import celery_app
-from config import get_accounts_email_notificator, get_settings
+from config import get_settings
 from fastapi import Depends
 
 from notifications import EmailSender
