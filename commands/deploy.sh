@@ -14,7 +14,7 @@ cd /home/ubuntu/src/online-cinema || handle_error "Failed to navigate to the app
 
 # Checkout the develop branch
 echo "Switching to the develop branch..."
-git checkout dev || handle_error "Failed to checkout the dev branch."
+git checkout dev || handle_error "Failed to checkout the develop branch."
 
 # Fetch the latest changes from the remote repository
 echo "Fetching the latest changes from the remote repository..."
