@@ -73,3 +73,17 @@ combine_as_imports = true
 [tool.mypy]
 python_version = 3.12
 ignore_missing_imports = true
+strict_optional = false
+follow_imports = "skip"
+exclude = [
+    ".venv",
+    "venv",
+    "src/tests/*",
+    "src/database/migrations/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+env = ["ENVIRONMENT=testing"]

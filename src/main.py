@@ -1,8 +1,5 @@
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
-from sqlalchemy import select
-from database.models.accounts import UserGroupModel, UserGroupEnum
-from database.session_postgresql import get_postgresql_db
 
 from routers import accounts, movies, orders, carts, profiles, comments, payments
 
@@ -19,14 +16,3 @@ app.include_router(
 )
 app.include_router(orders.router, prefix=f"{api_version_prefix}/orders", tags=["Orders"])
 app.include_router(payments.router, prefix=f"{api_version_prefix}/payments", tags=["Payments"])
-
-
-@app.on_event("startup")
-async def create_default_groups():
-    async for db in get_postgresql_db():
-        for group in UserGroupEnum:
-            stmt = select(UserGroupModel).where(UserGroupModel.name == group)
-            result = await db.execute(stmt)
-            if not result.scalars().first():
-                db.add(UserGroupModel(name=group))
-        await db.commit()
