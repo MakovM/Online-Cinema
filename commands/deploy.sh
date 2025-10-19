@@ -10,7 +10,7 @@ handle_error() {
 }
 
 # Navigate to the application directory
-cd /home/ubuntu/src/online-cinema || handle_error "Failed to navigate to the application directory."
+cd /home/ubuntu/src/Online-Cinema || handle_error "Failed to navigate to the application directory."
 
 # Checkout the develop branch
 echo "Switching to the develop branch..."
