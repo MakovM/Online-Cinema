@@ -7,11 +7,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, joinedload
 
-from config.dependencies import get_accounts_email_notificator
+from tasks.notifications import send_email_task
+
 from config.settings import BASE_URL, API_VERSION_PREFIX
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
-from database.session_postgresql import get_postgresql_db
 from database import get_db
 from database.models.accounts import (
     ActivationTokenModel,
@@ -21,7 +21,6 @@ from database.models.accounts import (
     UserGroupModel,
     UserModel,
 )
-from notifications import EmailSenderInterface
 from schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
@@ -70,10 +69,8 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[UserModel]
     },
 )
 async def user_register(
-    background_tasks: BackgroundTasks,
     user: UserRegistrationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     db_user = await get_user_by_email(db, user.email)
     if db_user:
@@ -102,7 +99,12 @@ async def user_register(
         raise HTTPException(status_code=500, detail="An error occurred during user creation.")
 
     activation_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/activate/?token={user_token.token}&email={user.email}"
-    background_tasks.add_task(email_sender.send_activation_email, user.email, activation_link)
+
+    send_email_task.delay(
+        method_name="send_activation_email",
+        email=str(user.email),
+        activation_link=activation_link,
+    )
 
     return UserRegistrationResponseSchema.model_validate(new_user)
 
@@ -124,10 +126,8 @@ async def user_register(
     },
 )
 async def activate_user(
-    background_tasks: BackgroundTasks,
     data: UserActivationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     db_user = await get_user_by_email(db, data.email)
     if not db_user or db_user.is_active:
@@ -156,10 +156,10 @@ async def activate_user(
         )
 
     login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
-    background_tasks.add_task(
-        email_sender.send_activation_complete_email,
-        str(data.email),
-        login_link,
+    send_email_task.delay(
+        method_name="send_activation_complete_email",
+        email=str(data.email),
+        login_link=login_link,
     )
 
     return MessageResponseSchema.model_validate({"message": "User account activated successfully."})
@@ -176,10 +176,8 @@ async def activate_user(
     },
 )
 async def resend_activation_email(
-    background_tasks: BackgroundTasks,
     email_data: BaseEmailSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     stmt = select(UserModel).where(UserModel.email == email_data.email)
     result = await db.execute(stmt)
@@ -204,8 +202,11 @@ async def resend_activation_email(
     await db.commit()
 
     activation_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/activate/?token={new_token.token}&email={user.email}"
-    background_tasks.add_task(email_sender.send_activation_email, user.email, activation_link)
-
+    send_email_task.delay(
+        method_name="send_activation_email",
+        email=str(user.email),
+        activation_link=activation_link,
+    )
     return MessageResponseSchema(message="A new activation email has been sent.")
 
 
@@ -214,10 +215,8 @@ async def resend_activation_email(
     response_model=MessageResponseSchema,
 )
 async def password_reset_token_request(
-    background_tasks: BackgroundTasks,
     data: PasswordResetRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     db_user = await get_user_by_email(db, data.email)
 
@@ -237,10 +236,11 @@ async def password_reset_token_request(
         password_reset_complete_link = (
             f"{BASE_URL}{API_VERSION_PREFIX}/accounts/password-reset-complete/?token={token.token}"
         )
-        background_tasks.add_task(
-            email_sender.send_password_reset_email,
-            str(data.email),
-            password_reset_complete_link,
+
+        send_email_task.delay(
+            method_name="send_password_reset_email",
+            email=str(data.email),
+            reset_link=password_reset_complete_link,
         )
 
     return MessageResponseSchema.model_validate(
@@ -260,10 +260,8 @@ async def password_reset_token_request(
     },
 )
 async def password_reset_token_completion(
-    background_tasks: BackgroundTasks,
     data: PasswordResetCompleteRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     db_user = await get_user_by_email(db, data.email)
 
@@ -290,11 +288,12 @@ async def password_reset_token_completion(
         await db.commit()
 
         login_link = f"{BASE_URL}{API_VERSION_PREFIX}/accounts/login/"
-        background_tasks.add_task(
-            email_sender.send_password_reset_complete_email,
-            str(data.email),
-            login_link,
+        send_email_task.delay(
+            method_name="send_password_reset_complete_email",
+            email=str(data.email),
+            login_link=login_link,
         )
+
     except Exception:
         await db.rollback()
         raise HTTPException(
