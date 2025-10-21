@@ -390,7 +390,7 @@ async def create_movie(
 
         db.add(movie)
         await db.commit()
-        await db.refresh(movie, ["certification", "genres", "directors", "stars"])
+        await db.refresh(movie, ["certification", "genres", "directors", "stars", "comments"])
 
         return MovieDetailSchema.model_validate(movie)
 
@@ -440,7 +440,7 @@ async def update_movie(
 
     try:
         await db.commit()
-        await db.refresh(movie, ["certification", "genres", "directors", "stars"])
+        await db.refresh(movie, ["certification", "genres", "directors", "stars", "comments"])
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=400, detail="Invalid input data.")
