@@ -90,6 +90,10 @@ class UserModel(Base):
         "UserFavorite", back_populates="user", cascade="all, delete-orphan"
     )
 
+    payments: Mapped[List["PaymentModel"]] = relationship(  # type: ignore[name-defined]
+        "PaymentModel", back_populates="user", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
 

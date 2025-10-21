@@ -49,12 +49,12 @@ services:
       - PYTHONPATH=/usr/src/fastapi
       - WATCHFILES_FORCE_POLLING=true
       - POSTGRES_HOST=postgres_cinema
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
       db:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     volumes:
       - ./src:/usr/src/fastapi
@@ -78,6 +78,46 @@ services:
     networks:
       - cinema_network
 
+  redis:
+    image: redis:latest
+    container_name: redis_movie
+    ports:
+      - "6379:6379"
+    networks:
+      - cinema_network
+
+  celery:
+    build: .
+    command: celery -A celery_conf worker --loglevel=info
+    working_dir: /usr/src/fastapi
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+    networks:
+      - cinema_network
+
+  celery-beat:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    working_dir: /usr/src/fastapi
+    command: celery -A celery_conf beat --loglevel=info
+    depends_on:
+      - redis
+      - celery
+    networks:
+      - cinema_network
+
   nginx:
     build:
       context: .
@@ -88,12 +128,12 @@ services:
       - "80:80"
     volumes:
       - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - web
     env_file:
       - ./docker/nginx/.env
     networks:
       - cinema_network
+    depends_on:
+      - web
 
 volumes:
   postgres_cinema_data:

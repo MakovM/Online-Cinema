@@ -8,6 +8,8 @@ packages = [{include = "src"}]
 [tool.poetry.dependencies]
 python = "^3.12"
 fastapi = "^0.115.6"
+fastapi-filter = "^2.0.1"
+fastapi-pagination = "^0.14.3"
 uvicorn = {extras = ["standard"], version = "^0.34.0"}
 pydantic = "^2.10.5"
 pydantic-settings = "^2.7.0"
@@ -37,8 +39,6 @@ beautifulsoup4 = "^4.12.3"
 validators = "^0.34.0"
 gunicorn = "^23.0.0"
 async-timeout = "^5.0.1"
-fastapi-filter = "^2.0.1"
-fastapi-pagination = "^0.14.3"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -73,3 +73,17 @@ combine_as_imports = true
 [tool.mypy]
 python_version = 3.12
 ignore_missing_imports = true
+strict_optional = false
+follow_imports = "skip"
+exclude = [
+    ".venv",
+    "venv",
+    "src/tests/*",
+    "src/database/migrations/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+env = ["ENVIRONMENT=testing"]

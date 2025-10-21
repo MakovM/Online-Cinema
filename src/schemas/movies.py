@@ -108,7 +108,7 @@ class MovieDetailSchema(MovieBaseSchema):
 
     model_config = {
         "from_attributes": True,
-        "json_schema_extra": {"examples": [movie_detail_schema_example]},
+        "json_schema_extra": {"examples": [movie_detail_schema_example]}, # type: ignore
     }
 
 

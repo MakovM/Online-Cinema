@@ -26,6 +26,7 @@ class OrderStatusEnum(str, enum.Enum):
     PENDING = "pending"
     PAID = "paid"
     CANCELED = "canceled"
+    EXPIRED = "expired"
 
 
 class OrderModel(Base):
@@ -48,6 +49,10 @@ class OrderModel(Base):
 
     items: Mapped[List["OrderItemModel"]] = relationship(
         "OrderItemModel", back_populates="order", cascade="all, delete-orphan"
+    )
+
+    payments: Mapped[List["PaymentModel"]] = relationship(  # type: ignore[name-defined]
+        "PaymentModel", back_populates="order", cascade="all, delete-orphan"
     )
 
 
