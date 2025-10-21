@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import get_accounts_email_notificator, get_s3_storage_client, get_settings
 from database import (
     Movie,
+    Certification,
     UserGroupEnum,
     UserGroupModel,
     UserModel,
@@ -261,6 +262,12 @@ async def moderator(db_session):
 
 @pytest_asyncio.fixture(scope="function")
 async def movie(db_session):
+    
+    certification = Certification(name="PG-13")
+    db_session.add(certification)
+    await db_session.commit()
+    await db_session.refresh(certification)
+    
     movie = Movie(
         name="test",
         year=2015,
@@ -271,9 +278,21 @@ async def movie(db_session):
         gross=5.0,
         price=228.0,
         description="dsc",
-        certification_id=1,
+        certification_id=certification.id,
     )
     db_session.add(movie)
     await db_session.commit()
     await db_session.refresh(movie)
     return movie
+
+
+@pytest_asyncio.fixture
+def user_headers(user, jwt_manager):
+    token = jwt_manager.create_access_token({"user_id": user.id})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+def moderator_headers(moderator, jwt_manager):
+    token = jwt_manager.create_access_token({"user_id": moderator.id})
+    return {"Authorization": f"Bearer {token}"}

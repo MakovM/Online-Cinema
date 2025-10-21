@@ -40,7 +40,9 @@ movie_directors = Table(
     "movie_directors",
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id", ondelete="CASCADE"), primary_key=True),
-    Column("director_id", ForeignKey("directors.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "director_id", ForeignKey("directors.id", ondelete="CASCADE"), primary_key=True
+    ),
 )
 
 
@@ -100,7 +102,9 @@ class Certification(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
-    movies: Mapped[list["Movie"]] = relationship("Movie", back_populates="certification")
+    movies: Mapped[list["Movie"]] = relationship(
+        "Movie", back_populates="certification"
+    )
 
     def __repr__(self):
         return f"<Certification(id={self.id}, name='{self.name}')>"
@@ -121,14 +125,20 @@ class Movie(Base):
     imdb: Mapped[float] = mapped_column(Float, nullable=False)  # IMDb rating
     votes: Mapped[int] = mapped_column(Integer, nullable=False)  # number of votes
     meta_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    gross: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # gross revenue
+    gross: Mapped[Optional[float]] = mapped_column(
+        Float, nullable=True
+    )  # gross revenue
     description: Mapped[str] = mapped_column(Text, nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
 
-    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
+    certification_id: Mapped[int] = mapped_column(
+        ForeignKey("certifications.id"), nullable=False
+    )
 
     # Relationships
-    certification: Mapped["Certification"] = relationship("Certification", back_populates="movies")
+    certification: Mapped["Certification"] = relationship(
+        "Certification", back_populates="movies"
+    )
 
     genres: Mapped[list["Genre"]] = relationship(
         "Genre", secondary=movie_genres, back_populates="movies"
@@ -150,7 +160,9 @@ class Movie(Base):
         "Comment", back_populates="movie", cascade="all, delete-orphan"
     )
 
-    __table_args__ = (UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),)
+    __table_args__ = (
+        UniqueConstraint("name", "year", "time", name="uq_movie_name_year_time"),
+    )
 
     @classmethod
     def default_order_by(cls):
@@ -187,19 +199,25 @@ class Comment(Base):
     movie_id: Mapped[int] = mapped_column(
         ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     movie: Mapped["Movie"] = relationship("Movie", back_populates="comments")
 
     def __repr__(self):
-        return f"<Comment(id={self.id}, movie_id={self.movie_id}, user_id={self.user_id})>"
+        return (
+            f"<Comment(id={self.id}, movie_id={self.movie_id}, user_id={self.user_id})>"
+        )
 
 
 class Like(Base):
     __tablename__ = "likes"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     likeable_id: Mapped[int] = mapped_column(Integer, nullable=False)
     likeable_type: Mapped[str] = mapped_column(
         ENUM("movie", "comment", name="likeable_types"), nullable=False
